@@ -17,7 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     useFactory: (configService: ConfigService) => ({
       uri: configService.get<string>('database.url'),
     }),
-  }),],
+  })],
   controllers: [AppController],
   providers: [AppService],
 })
