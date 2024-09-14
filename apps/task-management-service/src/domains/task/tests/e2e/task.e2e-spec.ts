@@ -33,6 +33,7 @@ describe('TaskController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/tasks')
       .send({
+        _id:"66e578cc9f2e2bca648b4f99",
         title: 'Test Task',
         description: 'This is a test task',
         priority: 'Medium',
@@ -46,7 +47,7 @@ describe('TaskController (e2e)', () => {
 
   it('/api/tasks/:id (GET) - should get a task by id', async () => {
     const response = await request(app.getHttpServer())
-      .get(`/api/tasks/task-id`)
+      .get(`/api/tasks/66e578cc9f2e2bca648b4f99`)
       .expect(200);
 
     expect(response.body.title).toBe('Test Task');
@@ -63,7 +64,7 @@ describe('TaskController (e2e)', () => {
 
   it('/api/tasks/:id (PUT) - should update a task', async () => {
     const response = await request(app.getHttpServer())
-      .put('/api/tasks/task-id')
+      .put('/api/tasks/66e578cc9f2e2bca648b4f99')
       .send({
         title: 'Updated Task',
       })
@@ -74,7 +75,7 @@ describe('TaskController (e2e)', () => {
 
   it('/api/tasks/:id (DELETE) - should delete a task', async () => {
     await request(app.getHttpServer())
-      .delete(`/api/tasks/task-id`)
+      .delete(`/api/tasks/66e578cc9f2e2bca648b4f99`)
       .expect(200);
   });
 });
