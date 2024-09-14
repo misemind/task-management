@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from './common/logger/logger.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [LoggerModule], // Import the MinioModule if it's not globally available
