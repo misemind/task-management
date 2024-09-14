@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsDate, IsEnum } from 'class-validator';
 
 export class CreateTaskDto {
@@ -20,7 +21,8 @@ export class CreateTaskDto {
   @IsEnum(['To Do', 'In Progress', 'Done'])
   readonly status: string;
 
-  @ApiProperty({ description: 'Deadline of the task', type: Date })
+  @ApiProperty({ description: 'Deadline of the task', type: Date, format:'date-time' })
+  @Type(()=>Date)
   @IsDate()
   readonly deadline: Date;
 }
