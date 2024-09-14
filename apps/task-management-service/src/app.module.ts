@@ -5,10 +5,12 @@ import { TaskModule } from './domains/task/task.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import config from '@app/config/config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { SocketModule } from './socket/socket.module';
-import { KafkaModule } from './kafka/kafka.module';
+import { SocketModule } from '@app/socket/socket.module';
+import { KafkaModule } from '@app/kafka/kafka.module';
+import { RedisModule } from '@app/redis/redis.module';
 @Module({
   imports: [TaskModule.forRoot(), KafkaModule,SocketModule,
+    RedisModule,
     ConfigModule.forRoot({
     isGlobal: true,
     load: [config],

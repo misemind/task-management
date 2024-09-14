@@ -18,6 +18,7 @@ export default () => ({
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT, 10) || 6379,
         password: process.env.REDIS_PASSWORD || '',
+        username: process.env.REDIS_USERNAME || '',
         tls: process.env.REDIS_TLS_ENABLED === 'true',
       },
     host:{
