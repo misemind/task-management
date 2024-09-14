@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as bodyParser from 'body-parser';
-import * as express from 'express';
-import * as path from 'path';
-import { ValidationPipe } from '@nestjs/common';
 import { Logger } from './core/common/logger/logger.service';
+import * as path from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -19,7 +19,7 @@ async function bootstrap() {
   });
 
   const logger = app.get(Logger);
-  app.useLogger(logger);
+  // app.useLogger(logger);
 
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 10000 }));
