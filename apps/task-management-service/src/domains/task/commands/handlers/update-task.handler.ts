@@ -23,8 +23,7 @@ export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
       throw new NotFoundException('Task not found');
     }
 
-    const updateData = { ...existingTask, ...command.updateTaskDto };
-    const updatedTask = await this.taskRepository.update(existingTask._id, updateData);
+    const updatedTask = await this.taskRepository.update(existingTask._id, command.updateTaskDto);
     this.logger.log(`Task updated successfully with ID: ${existingTask._id}`);
 
     return updatedTask;

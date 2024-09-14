@@ -5,7 +5,7 @@ import { Server, Socket } from 'socket.io';
 import { KafkaService } from '@app/kafka/kafka.service';
 import { Inject, forwardRef } from '@nestjs/common';
 
-@WebSocketGateway({ namespace: '/chat' })
+@WebSocketGateway({ namespace: '/websocket' })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
