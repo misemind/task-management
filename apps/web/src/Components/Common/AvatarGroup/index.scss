@@ -1,0 +1,12 @@
+.avatar-group-container{
+    .avatar{
+        border: 2px solid white;
+        margin-right: -13px;
+        cursor: pointer;
+        transition: all 0.2s ease-in;
+        &:hover{
+            transform: translateY(-3px) scale(1.05);
+            z-index: 5;
+        }
+    }
+}

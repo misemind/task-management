@@ -1,0 +1,30 @@
+### Task Overview:
+As an experienced ReactJS developer, your task is to integrate a new API endpoint into an existing codebase by adding a new Redux Thunk, updating Redux actions, reducers, and ensuring all related parts of the application are updated consistently. This task is generic and can be applied to any entity API, including `projectEmployee`, `task`, `user`, etc.
+
+### Steps to Accomplish the Task:
+
+1. **Review the Existing Codebase**:
+   - Begin by reviewing the current implementation of Redux Thunks, actions, reducers, and how API endpoints are managed within the codebase.
+   - Identify where the new API Thunk will be added, and ensure you understand the patterns used.
+
+2. **Update URL Management**:
+   - Add the new API endpoint URL to the centralized URL management file, such as `url_helper.ts` or a similar file. This ensures that all API endpoints are managed in one place for easy updates and maintenance.
+
+3. **Create the New Redux Thunk**:
+   - Define the new Redux Thunk following the existing patterns. This includes creating the Thunk function that will handle API requests, process responses, and handle errors.
+   - Ensure the Thunk is added to the appropriate actions file or created in a new file if necessary.
+
+4. **Integrate the Thunk into Redux**:
+   - Update the relevant Redux slice or reducer to handle the new Thunk. This includes adding cases to handle the different states of the API request (e.g., loading, success, failure).
+   - Ensure that the state updates and side effects are consistent with existing patterns in the codebase.
+
+5. **Test the Integration**:
+   - Ensure that the new Thunk is properly tested, either by writing unit tests or by manual testing through the UI.
+   - Verify that the new API endpoint is being called correctly and that the Redux state updates as expected.
+
+6. **Documentation and Code Consistency**:
+   - Document the new Thunk and any updates made to the codebase.
+   - Ensure that your changes follow the existing coding standards and conventions, maintaining consistency across the codebase.
+
+### Generic Application:
+This description can be applied to any entity within your application, whether you are adding a new API endpoint for `projectEmployee`, `task`, `user`, or any other entity. The key is to follow the existing patterns, update all relevant parts of the Redux store, and ensure that the integration is seamless and consistent with the rest of the codebase.

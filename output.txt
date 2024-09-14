@@ -1,0 +1,482 @@
+// apps/server/src/domains/project-employee/commands/handlers/create-project-employee.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { ProjectEmployeeRepository } from '../../repositories/project-employee.repository';
+import { CreateProjectEmployeeCommand } from '../impl/create-project-employee.command';
+import { EmployeeRepository } from '../../../employee/repositories/employee.repository';
+import { ProjectRepository } from '../../../project/repositories/project.repository';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ProjectEmployee } from '../../entities/project-employee.entity';
+
+@CommandHandler(CreateProjectEmployeeCommand)
+export class CreateProjectEmployeeHandler implements ICommandHandler<CreateProjectEmployeeCommand> {
+  constructor(
+    private readonly projectEmployeeRepository: ProjectEmployeeRepository,
+    private readonly employeeRepository: EmployeeRepository,
+    private readonly projectRepository: ProjectRepository,
+  ) {}
+
+  async execute(command: CreateProjectEmployeeCommand): Promise<ProjectEmployee> {
+    const { createProjectEmployeeDto } = command;
+
+    const employeeId = createProjectEmployeeDto.employeeId;
+    const projectId = createProjectEmployeeDto.projectId;
+
+    const employee = await this.employeeRepository.findById(employeeId);
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const project = await this.projectRepository.findById(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const existingAssignment = await this.projectEmployeeRepository.findByEmployeeAndProject(employeeId, projectId);
+    if (existingAssignment) {
+      throw new BadRequestException('Employee is already assigned to this project');
+    }
+
+    const projectEmployee = await this.projectEmployeeRepository.create(createProjectEmployeeDto);
+
+    // Update the employee and project documents with the assignment
+    employee.projectNumber += 1;
+    employee.projects.push(projectId);  // Push the projectId directly
+
+    project.employeeCount += 1;
+    project.employees.push(employeeId);  // Push the employeeId directly
+
+    await this.employeeRepository.update(employee._id.toString(), employee);
+    await this.projectRepository.update(project._id.toString(), project);
+
+    return projectEmployee;
+  }
+}
+
+
+// apps/server/src/domains/project-employee/commands/handlers/delete-project-employee.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { ProjectEmployeeRepository } from '../../repositories/project-employee.repository';
+import { DeleteProjectEmployeeCommand } from '../impl/delete-project-employee.command';
+import { EmployeeRepository } from '../../../employee/repositories/employee.repository';
+import { ProjectRepository } from '../../../project/repositories/project.repository';
+import { NotFoundException } from '@nestjs/common';
+import { ProjectEmployee } from '../../entities/project-employee.entity';
+
+@CommandHandler(DeleteProjectEmployeeCommand)
+export class DeleteProjectEmployeeHandler implements ICommandHandler<DeleteProjectEmployeeCommand> {
+  constructor(
+    private readonly projectEmployeeRepository: ProjectEmployeeRepository,
+    private readonly employeeRepository: EmployeeRepository,
+    private readonly projectRepository: ProjectRepository,
+  ) {}
+
+  async execute(command: DeleteProjectEmployeeCommand): Promise<ProjectEmployee | null> {
+    const { projectId, employeeId } = command;
+
+    const projectEmployee = await this.projectEmployeeRepository.findByEmployeeAndProject(employeeId, projectId);
+    if (!projectEmployee) {
+      throw new NotFoundException('ProjectEmployee assignment not found');
+    }
+
+    const employee = await this.employeeRepository.findById(employeeId);
+    const project = await this.projectRepository.findById(projectId);
+
+    // Remove the assignment
+    await this.projectEmployeeRepository.delete(projectEmployee._id.toString());
+
+    // Update the employee and project documents after removal
+    if (employee) {
+      employee.projectNumber -= 1;
+      employee.projects = employee.projects.filter(projId => projId !== projectId);
+      await this.employeeRepository.update(employee._id.toString(), employee);
+    }
+
+    if (project) {
+      project.employeeCount -= 1;
+      project.employees = project.employees.filter(empId => empId !== employeeId);
+      await this.projectRepository.update(project._id.toString(), project);
+    }
+
+    return projectEmployee;
+  }
+}
+
+
+// apps/server/src/domains/project-employee/commands/impl/create-project-employee.command.ts
+import { ICommand } from '@nestjs/cqrs';
+import { CreateProjectEmployeeDto } from '../../dto/create-project-employee.dto';
+
+export class CreateProjectEmployeeCommand implements ICommand {
+  constructor(public readonly createProjectEmployeeDto: CreateProjectEmployeeDto) {}
+}
+
+// apps/server/src/domains/project-employee/commands/impl/delete-project-employee.command.ts
+import { ICommand } from '@nestjs/cqrs';
+
+export class DeleteProjectEmployeeCommand implements ICommand {
+  constructor(
+    public readonly projectId: string,
+    public readonly employeeId: string,
+  ) {}
+}
+
+// apps/server/src/domains/project-employee/commands/index.ts
+import { CreateProjectEmployeeHandler } from './handlers/create-project-employee.handler';
+import { DeleteProjectEmployeeHandler } from './handlers/delete-project-employee.handler';
+
+export const ProjectEmployeeCommandHandlers = [
+  CreateProjectEmployeeHandler,
+  DeleteProjectEmployeeHandler,
+];
+
+// apps/server/src/domains/project-employee/controllers/project-employee.controller.ts
+import { Controller, Get, Query, Param, Post, Body, Delete } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { CreateProjectEmployeeDto } from '../dto/create-project-employee.dto';
+import { ProjectEmployeeService } from '../services/project-employee.service';
+
+@ApiTags('Project Employee')
+@Controller('api/project-employees')
+export class ProjectEmployeeController {
+  constructor(private readonly projectEmployeeService: ProjectEmployeeService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Assign an employee to a project' })
+  @ApiResponse({ status: 201, description: 'The employee has been successfully assigned to the project.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  create(@Body() createProjectEmployeeDto: CreateProjectEmployeeDto) {
+    return this.projectEmployeeService.createProjectEmployee(createProjectEmployeeDto);
+  }
+
+  @Get('by-project/:projectId')
+  @ApiOperation({ summary: 'Get employees assigned to a project with pagination' })
+  @ApiResponse({ status: 200, description: 'Return employees assigned to the project.' })
+  @ApiResponse({ status: 404, description: 'Project not found.' })
+  @ApiParam({ name: 'projectId', description: 'ID of the project' })
+  findByProjectId(
+    @Param('projectId') projectId: string,
+    @Query('limit') limit: number,
+    @Query('page') page: number,
+  ) {
+    const skip = (page - 1) * limit;
+    return this.projectEmployeeService.findByProjectIdWithPagination(projectId, limit, skip);
+  }
+
+  @Get('by-employee/:employeeId')
+  @ApiOperation({ summary: 'Get projects assigned to an employee with pagination' })
+  @ApiResponse({ status: 200, description: 'Return projects assigned to the employee.' })
+  @ApiResponse({ status: 404, description: 'Employee not found.' })
+  @ApiParam({ name: 'employeeId', description: 'ID of the employee' })
+  findByEmployeeId(
+    @Param('employeeId') employeeId: string,
+    @Query('limit') limit: number,
+    @Query('page') page: number,
+  ) {
+    const skip = (page - 1) * limit;
+    return this.projectEmployeeService.findByEmployeeIdWithPagination(employeeId, limit, skip);
+  }
+
+  @Delete('by-project-and-employee')
+  @ApiOperation({ summary: 'Remove an employee from a project' })
+  @ApiResponse({ status: 200, description: 'The employee has been successfully removed from the project.' })
+  @ApiResponse({ status: 404, description: 'ProjectEmployee assignment not found.' })
+  remove(
+    @Query('projectId') projectId: string,
+    @Query('employeeId') employeeId: string,
+  ) {
+    return this.projectEmployeeService.deleteProjectEmployee(projectId, employeeId);
+  }
+}
+
+
+// apps/server/src/domains/project-employee/dto/create-project-employee.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty } from 'class-validator';
+
+export class CreateProjectEmployeeDto {
+  @ApiProperty({ description: 'ID of the employee' })
+  @IsString()
+  @IsNotEmpty()
+  readonly employeeId: string;
+
+  @ApiProperty({ description: 'ID of the project' })
+  @IsString()
+  @IsNotEmpty()
+  readonly projectId: string;
+
+  @ApiProperty({ description: 'Role of the employee in the project' })
+  @IsString()
+  @IsNotEmpty()
+  readonly role: string;
+
+  @ApiProperty({ description: 'Status of the employee in the project' })
+  @IsString()
+  @IsNotEmpty()
+  readonly status: string;
+}
+
+// apps/server/src/domains/project-employee/entities/project-employee.entity.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
+import { Employee } from '../../employee/entities/employee.entity';
+import { Project } from '../../project/entities/project.entity';
+
+export type ProjectEmployeeDocument = ProjectEmployee & Document;
+
+@Schema()
+export class ProjectEmployee {
+   _id?:string
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: Employee.name,
+    required: true,
+    get: (v: Types.ObjectId) => v.toString(),  // Convert ObjectId to string
+    set: (v: string) => new Types.ObjectId(v),  // Convert string to ObjectId
+  })
+  employeeId: string;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: Project.name,
+    required: true,
+    get: (v: Types.ObjectId) => v.toString(),  // Convert ObjectId to string
+    set: (v: string) => new Types.ObjectId(v),  // Convert string to ObjectId
+  })
+  projectId: string;
+
+  @Prop({ required: true })
+  role: string;
+
+  @Prop({ required: true })
+  status: string;
+
+  @Prop({ default: Date.now })
+  assignedAt: Date;
+}
+
+export const ProjectEmployeeSchema = SchemaFactory.createForClass(ProjectEmployee);
+
+
+// apps/server/src/domains/project-employee/project-employee.module.ts
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { CqrsModule } from '@nestjs/cqrs';
+
+import { ProjectEmployeeRepository } from './repositories/project-employee.repository';
+import { ProjectEmployeeCommandHandlers } from './commands';
+import { ProjectEmployeeQueryHandlers } from './queries';
+import { EmployeeModule } from '../employee/employee.module';
+import { ProjectModule } from '../project/project.module';
+import { ProjectEmployee, ProjectEmployeeSchema } from './entities/project-employee.entity';
+import { ProjectEmployeeController } from './controllers/project-employee.controller';
+import { ProjectEmployeeService } from './services/project-employee.service';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: ProjectEmployee.name, schema: ProjectEmployeeSchema }]),
+    CqrsModule,
+    ProjectModule,
+    EmployeeModule.forRoot({}),
+  ],
+  providers: [
+    ProjectEmployeeRepository,
+    ProjectEmployeeService,
+    ...ProjectEmployeeCommandHandlers,
+    ...ProjectEmployeeQueryHandlers,
+  ],
+  controllers:[ProjectEmployeeController],
+  exports: [ProjectEmployeeRepository],
+})
+export class ProjectEmployeeModule {}
+
+// apps/server/src/domains/project-employee/queries/handlers/get-project-employees-by-project.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { ProjectEmployeeRepository } from '../../repositories/project-employee.repository';
+import { GetProjectEmployeesByProjectQuery } from '../impl/get-project-employees-by-project.query';
+import { ProjectEmployee } from '../../entities/project-employee.entity';
+
+
+@QueryHandler(GetProjectEmployeesByProjectQuery)
+export class GetProjectEmployeesByProjectHandler implements IQueryHandler<GetProjectEmployeesByProjectQuery> {
+  constructor(private readonly projectEmployeeRepository: ProjectEmployeeRepository) {}
+
+  async execute(query: GetProjectEmployeesByProjectQuery): Promise<ProjectEmployee[]> {
+    const { projectId, limit, skip } = query;
+    return this.projectEmployeeRepository.findByProjectIdWithPagination(projectId, limit, skip);
+  }
+}
+
+// apps/server/src/domains/project-employee/queries/handlers/get-projects-by-employee.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { ProjectEmployeeRepository } from '../../repositories/project-employee.repository';
+import { GetProjectsByEmployeeQuery } from '../impl/get-projects-by-employee.query';
+import { ProjectEmployee } from '../../entities/project-employee.entity';
+
+
+@QueryHandler(GetProjectsByEmployeeQuery)
+export class GetProjectsByEmployeeHandler implements IQueryHandler<GetProjectsByEmployeeQuery> {
+  constructor(private readonly projectEmployeeRepository: ProjectEmployeeRepository) {}
+
+  async execute(query: GetProjectsByEmployeeQuery): Promise<ProjectEmployee[]> {
+    const { employeeId, limit, skip } = query;
+    return this.projectEmployeeRepository.findByEmployeeIdWithPagination(employeeId, limit, skip);
+  }
+}
+
+// apps/server/src/domains/project-employee/queries/impl/get-project-employees-by-project.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetProjectEmployeesByProjectQuery implements IQuery {
+  constructor(
+    public readonly projectId: string,
+    public readonly limit: number,
+    public readonly skip: number,
+  ) {}
+}
+
+// apps/server/src/domains/project-employee/queries/impl/get-projects-by-employee.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetProjectsByEmployeeQuery implements IQuery {
+  constructor(
+    public readonly employeeId: string,
+    public readonly limit: number,
+    public readonly skip: number,
+  ) {}
+}
+
+// apps/server/src/domains/project-employee/queries/index.ts
+import { GetProjectEmployeesByProjectHandler } from './handlers/get-project-employees-by-project.handler';
+import { GetProjectsByEmployeeHandler } from './handlers/get-projects-by-employee.handler';
+
+export const ProjectEmployeeQueryHandlers = [
+  GetProjectEmployeesByProjectHandler,
+  GetProjectsByEmployeeHandler,
+];
+
+// apps/server/src/domains/project-employee/repositories/project-employee.repository.ts
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { ProjectEmployee, ProjectEmployeeDocument } from '../entities/project-employee.entity';
+import { CreateProjectEmployeeDto } from '../dto/create-project-employee.dto';
+
+@Injectable()
+export class ProjectEmployeeRepository {
+  constructor(@InjectModel(ProjectEmployee.name) private readonly projectEmployeeModel: Model<ProjectEmployeeDocument>) {}
+
+  async create(createProjectEmployeeDto: CreateProjectEmployeeDto): Promise<ProjectEmployee> {
+    const newProjectEmployee = new this.projectEmployeeModel(createProjectEmployeeDto);
+    return newProjectEmployee.save();
+  }
+
+  async findById(id: string): Promise<ProjectEmployee | null> {
+    return this.projectEmployeeModel.findById(id).exec();
+  }
+
+  async findByEmployeeAndProject(employeeId: string, projectId: string): Promise<ProjectEmployee | null> {
+    return this.projectEmployeeModel.findOne({ employeeId, projectId }).exec();
+  }
+  
+  async findByProjectIdWithPagination(projectId: string, limit: number, skip: number): Promise<any[]> {
+    return this.projectEmployeeModel.aggregate([
+      { $match: { projectId: new Types.ObjectId(projectId) } },
+      {
+        $lookup: {
+          from: 'employees',
+          localField: 'employeeId',
+          foreignField: '_id',
+          as: 'employee',
+        },
+      },
+      { $unwind: '$employee' },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $replaceRoot: { newRoot: '$employee' } // This line replaces the root with the employee document
+      }
+    ]).exec();
+  }
+
+  async findByEmployeeIdWithPagination(employeeId: string, limit: number, skip: number): Promise<any[]> {
+    return this.projectEmployeeModel.aggregate([
+      { $match: { employeeId: new Types.ObjectId(employeeId) } },
+      {
+        $lookup: {
+          from: 'projects',
+          localField: 'projectId',
+          foreignField: '_id',
+          as: 'project',
+        },
+      },
+      { $unwind: '$project' },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $replaceRoot: { newRoot: '$project' } // This line replaces the root with the project document
+      }
+    ]).exec();
+  }
+  async delete(id: string): Promise<ProjectEmployee | null> {
+    return this.projectEmployeeModel.findByIdAndDelete(id).exec();
+  }
+}
+
+
+// apps/server/src/domains/project-employee/services/project-employee.service.ts
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateProjectEmployeeCommand } from '../commands/impl/create-project-employee.command';
+import { DeleteProjectEmployeeCommand } from '../commands/impl/delete-project-employee.command';
+import { CreateProjectEmployeeDto } from '../dto/create-project-employee.dto';
+import { ProjectEmployee } from '../entities/project-employee.entity';
+import { GetProjectEmployeesByProjectQuery } from '../queries/impl/get-project-employees-by-project.query';
+import { GetProjectsByEmployeeQuery } from '../queries/impl/get-projects-by-employee.query';
+
+@Injectable()
+export class ProjectEmployeeService {
+  constructor(private readonly commandBus: CommandBus, private readonly queryBus: QueryBus) {}
+
+  async createProjectEmployee(createProjectEmployeeDto: CreateProjectEmployeeDto): Promise<ProjectEmployee> {
+    try {
+      return await this.commandBus.execute(new CreateProjectEmployeeCommand(createProjectEmployeeDto));
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Failed to create project-employee assignment', error);
+      throw new InternalServerErrorException('Failed to create project-employee assignment');
+    }
+  }
+
+  async findByProjectIdWithPagination(projectId: string, limit: number, skip: number): Promise<ProjectEmployee[]> {
+    try {
+      return await this.queryBus.execute(new GetProjectEmployeesByProjectQuery(projectId, limit, skip));
+    } catch (error) {
+      console.error('Failed to retrieve project employees', error);
+      throw new InternalServerErrorException('Failed to retrieve project employees');
+    }
+  }
+
+  async findByEmployeeIdWithPagination(employeeId: string, limit: number, skip: number): Promise<ProjectEmployee[]> {
+    try {
+      return await this.queryBus.execute(new GetProjectsByEmployeeQuery(employeeId, limit, skip));
+    } catch (error) {
+      console.error('Failed to retrieve employee projects', error);
+      throw new InternalServerErrorException('Failed to retrieve employee projects');
+    }
+  }
+  async deleteProjectEmployee(projectId: string, employeeId: string): Promise<ProjectEmployee | null> {
+    try {
+      return await this.commandBus.execute(new DeleteProjectEmployeeCommand(projectId, employeeId));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Failed to delete project-employee assignment', error);
+      throw new InternalServerErrorException('Failed to delete project-employee assignment');
+    }
+  }
+}
+
+

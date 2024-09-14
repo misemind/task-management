@@ -1,0 +1,52 @@
+Prompt:
+
+I am a Node.js developer using NestJS with TypeScript and implementing the CQRS (Command Query Responsibility Segregation) design pattern across different entities in my application. 
+I need a script to automate the generation of CQRS code for new entities, maintaining the format and structure as demonstrated below:
+
+Example CQRS Code for the Employee Entity:
+
+typescript
+Copy code
+// apps/server/src/domains/employee/commands/handlers/create-employee.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EmployeeRepository } from '../../repositories/employee.repository';
+import { Employee } from '../../entities/employee.entity';
+import { CreateEmployeeCommand } from '../impl/create-employee.command';
+
+@CommandHandler(CreateEmployeeCommand)
+export class CreateEmployeeHandler implements ICommandHandler<CreateEmployeeCommand> {
+  constructor(private readonly employeeRepository: EmployeeRepository) {}
+
+  async execute(command: CreateEmployeeCommand): Promise<Employee> {
+    return this.employeeRepository.create(command.createEmployeeDto);
+  }
+}
+
+// apps/server/src/domains/employee/commands/handlers/delete-employee.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EmployeeRepository } from '../../repositories/employee.repository';
+import { DeleteEmployeeCommand } from '../impl/delete-employee.command';
+import { Employee } from '../../entities/employee.entity';
+
+@CommandHandler(DeleteEmployeeCommand)
+export class DeleteEmployeeHandler implements ICommandHandler<DeleteEmployeeCommand> {
+  constructor(private readonly employeeRepository: EmployeeRepository) {}
+
+  async execute(command: DeleteEmployeeCommand): Promise<Employee | null> {
+    return this.employeeRepository.delete(command.id);
+  }
+}
+Requirements:
+
+Generate CQRS Code for a New Entity:
+
+Create similar CommandHandler classes for handling commands related to the new entity.
+Ensure the generated code includes command handlers for actions like Create, Update, Delete, etc., if applicable.
+Maintain Consistent Format:
+
+Follow the structure demonstrated in the example.
+Ensure proper import statements, class definitions, and method implementations are included.
+Adapt to New Entity:
+
+The script should be adaptable to different entities by taking into account entity-specific details such as repositories, entities, and commands.
+Please provide the script that can generate this code structure for any new entity, adhering to the CQRS design pattern as shown in the example.
