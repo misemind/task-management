@@ -5,6 +5,7 @@ import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { TaskService } from '@app/domains/task/services/task.service';
 import { PaginationDto } from '@app/domains/shared/dto/pagination.dto';
 
+
 @ApiTags('Task')
 @Controller('api/tasks')
 export class TaskController {
