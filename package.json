@@ -5,6 +5,7 @@
   "scripts": {
     "start:server": "pnpm --filter server start",
     "start:web": "pnpm --filter web start",
+    "start:frontend": "pnpm --filter frontend start",
     "build": "pnpm --recursive run build",
     "test": "pnpm --recursive run test",
     "lint": "pnpm --recursive run lint",
