@@ -1,0 +1,38 @@
+import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
+
+export type IssueDocument = Issue & Document;
+
+@Schema()
+export class FieldValue {
+  @Prop({ type: Types.ObjectId, ref: 'Field', required: true })
+  field_id: Types.ObjectId;  // Reference to the field
+
+  @Prop({ required: true })
+  value: any;  // Value for the field
+
+  @Prop({ required: true })
+  type: string;  // Field type (dropdown, text, etc.)
+}
+
+const FieldValueSchema = SchemaFactory.createForClass(FieldValue);
+
+@Schema()
+export class Issue {
+  @Prop({ required: true })
+  summary: string;
+
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Project', required: true })
+  project_id: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'IssueType', required: true })
+  issue_type_id: Types.ObjectId;
+
+  @Prop({ type: [{ type: FieldValueSchema }], required: true })
+  field_values: FieldValue[];
+}
+
+export const IssueSchema = SchemaFactory.createForClass(Issue);
