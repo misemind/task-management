@@ -6,11 +6,14 @@ import * as bodyParser from 'body-parser';
 import { Logger } from './core/common/logger/logger.service';
 import * as path from 'path';
 import * as express from 'express';
+import { ConfigService } from '@nestjs/config';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+  const configService = app.get(ConfigService);
   app.enableCors({
     origin: '*', // replace with your frontend URL or keep it as '*' to allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // or use '*' to allow all methods
@@ -50,6 +53,40 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3000);
+  const brokerUrl = configService.get<string>('kafka.brokerUrl');
+  const username = configService.get<string>('kafka.username');
+  const password = configService.get<string>('kafka.password');
+  const consumerGroupId = configService.get<string>('kafka.consumerGroupId');
+  
+  // Console log the values to debug
+  console.log('Kafka Broker URL:', brokerUrl);
+  console.log('Kafka Username:', username);
+  console.log('Kafka Password:', password);
+  console.log('Kafka Consumer Group ID:', consumerGroupId);
+  
+  const kafkaMicroservice = app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: [brokerUrl],
+        ssl: true,
+        sasl: {
+          mechanism: 'plain',
+          username: username,
+          password: password,
+        },
+      },
+      consumer: {
+        groupId: consumerGroupId,
+      },
+    },
+  });
+  
+
+
+  // Start the microservices
+  await app.startAllMicroservices(); 
+  await app.listen(configService.get<string>('host.port'));
+
 }
 bootstrap();

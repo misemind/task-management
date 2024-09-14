@@ -4,7 +4,7 @@ import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
 import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { TaskService } from '@app/domains/task/services/task.service';
 import { PaginationDto } from '@app/domains/shared/dto/pagination.dto';
-
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 
 @ApiTags('Task')
 @Controller('api/tasks')
@@ -49,5 +49,43 @@ export class TaskController {
   @ApiResponse({ status: 404, description: 'Task not found.' })
   remove(@Param('id') id: string) {
     return this.taskService.deleteTask(id);
+  }
+
+
+    // ---------------- Kafka Handlers ------------------
+
+  // Kafka Event: Create Task
+  @EventPattern('task.create')
+  async handleTaskCreateEvent(@Payload() message: CreateTaskDto): Promise<void> {
+    console.log('Received Kafka event for task.create:', message);
+    await this.taskService.createTask(message);
+  }
+
+  // Kafka Request-Response: Get All Tasks
+  @MessagePattern('task.getAll')
+  async handleGetAllTasksRequest(): Promise<any> {
+    console.log('Received Kafka request for task.getAll');
+    return this.taskService.getAllTasks(10, 1); // You can adjust pagination as needed
+  }
+
+  // Kafka Request-Response: Get Task by ID
+  @MessagePattern('task.getById')
+  async handleGetTaskByIdRequest(@Payload() message: any): Promise<any> {
+    console.log('Received Kafka request for task.getById:', message);
+    return this.taskService.getTaskById(message.id);
+  }
+
+  // Kafka Event: Update Task
+  @EventPattern('task.update')
+  async handleTaskUpdateEvent(@Payload() message: any): Promise<void> {
+    console.log('Received Kafka event for task.update:', message);
+    await this.taskService.updateTask(message.id, message.updateTaskDto);
+  }
+
+  // Kafka Event: Delete Task
+  @EventPattern('task.delete')
+  async handleTaskDeleteEvent(@Payload() message: any): Promise<void> {
+    console.log('Received Kafka event for task.delete:', message);
+    await this.taskService.deleteTask(message.id);
   }
 }
