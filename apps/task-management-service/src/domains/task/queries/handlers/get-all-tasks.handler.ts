@@ -7,9 +7,14 @@ import { GetAllTasksQuery } from '@app/domains/task/queries/impl/get-all-tasks.q
 export class GetAllTasksHandler implements IQueryHandler<GetAllTasksQuery> {
   constructor(private readonly taskRepository: TaskRepository) {}
 
-  async execute(query: GetAllTasksQuery): Promise<Task[]> {
+  async execute(query: GetAllTasksQuery): Promise<{data:Task[],total:number}> {
     const { limit, page } = query;
     const skip = (page - 1) * limit;
-    return this.taskRepository.findAll(limit, skip);
+    const tasks = await this.taskRepository.findAll(limit, skip);
+    const total = await this.taskRepository.countAll();
+    return {
+      data: tasks,
+      total,
+    };
   }
 }

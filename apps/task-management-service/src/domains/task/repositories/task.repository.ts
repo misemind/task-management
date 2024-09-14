@@ -29,4 +29,9 @@ export class TaskRepository {
   async delete(id: string): Promise<Task | null> {
     return this.taskModel.findByIdAndDelete(id).exec();
   }
+
+  async countAll(): Promise<number> {
+    return await this.taskModel.countDocuments();
+  }
+  
 }
