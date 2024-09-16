@@ -1,10 +1,13 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, Query, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
 import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { TaskService } from '@app/domains/task/services/task.service';
 import { PaginationDto } from '@app/domains/shared/dto/pagination.dto';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { BulkTaskDto } from '../dto/bulk-task.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { MulterConfig } from '@app/config/multerConfig';
 
 @ApiTags('Task')
 @Controller('api/tasks')
@@ -51,7 +54,20 @@ export class TaskController {
     return this.taskService.deleteTask(id);
   }
 
+  @Post('bulk-create')
+  @UseInterceptors(FileInterceptor('file', MulterConfig('tasks')))
+  async bulkCreate(@UploadedFile() file:any): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    // Pass the file buffer to the service
+    return this.taskService.bulkCreateTasks(file.buffer);
+  }
 
+  @Put('bulk-update')
+  async bulkUpdate(@Body() bulkTaskDto: BulkTaskDto): Promise<any> {
+    return this.taskService.bulkUpdateTasks(bulkTaskDto.tasks);
+  }
     // ---------------- Kafka Handlers ------------------
 
   // Kafka Event: Create Task
@@ -79,7 +95,7 @@ export class TaskController {
   @EventPattern('task.update')
   async handleTaskUpdateEvent(@Payload() message: any): Promise<void> {
     console.log('Received Kafka event for task.update:', message);
-    await this.taskService.updateTask(message.id, message.updateTaskDto);
+    await this.taskService.updateTask(message.id, message);
   }
 
   // Kafka Event: Delete Task

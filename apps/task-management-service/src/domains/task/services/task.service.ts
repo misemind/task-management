@@ -8,6 +8,8 @@ import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { GetAllTasksQuery } from '@app/domains/task/queries/impl/get-all-tasks.query';
 import { GetTaskByIdQuery } from '@app/domains/task/queries/impl/get-task-by-id.query';
 import { Logger } from '@app/core/common/logger/logger.service';
+import { BulkCreateTaskCommand } from '../commands/impl/bulk-create-task.command';
+import { BulkUpdateTaskCommand } from '../commands/impl/bulk-update-task.command';
 
 @Injectable()
 export class TaskService {
@@ -100,6 +102,34 @@ export class TaskService {
     } catch (error) {
       this.logger.error('Failed to retrieve tasks', error.stack);
       throw new InternalServerErrorException('Failed to retrieve tasks', error);
+    }
+  }
+
+  async bulkCreateTasks(fileBuffer: Buffer): Promise<any> {
+    try {
+      this.logger.log('Starting bulk task creation from Excel file');
+
+      // Pass the file buffer to the command
+      const tasks = await this.commandBus.execute(new BulkCreateTaskCommand(fileBuffer));
+
+      this.logger.log(`Successfully created tasks`);
+      return tasks;
+    } catch (error) {
+      this.logger.error('Failed to bulk create tasks', error.stack);
+      throw new InternalServerErrorException('Failed to bulk create tasks', error);
+    }
+  }
+
+  // Bulk update tasks
+  async bulkUpdateTasks(updateTaskDtos: UpdateTaskDto[]) {
+    try {
+      this.logger.log(`Updating multiple tasks with data: ${JSON.stringify(updateTaskDtos)}`);
+      const tasks = await this.commandBus.execute(new BulkUpdateTaskCommand(updateTaskDtos));
+      this.logger.log(`Successfully updated ${tasks.length} tasks`);
+      return tasks;
+    } catch (error) {
+      this.logger.error('Failed to bulk update tasks', error.stack);
+      throw new InternalServerErrorException('Failed to bulk update tasks', error);
     }
   }
 }

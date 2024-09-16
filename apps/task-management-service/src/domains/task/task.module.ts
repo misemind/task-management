@@ -1,5 +1,5 @@
 import { Module, DynamicModule } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { getConnectionToken, MongooseModule } from '@nestjs/mongoose';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TaskController } from './controllers/task.controller';
 import { TaskService } from './services/task.service';
@@ -8,6 +8,8 @@ import { TaskCommandHandlers } from './commands';
 import { TaskQueryHandlers } from './queries';
 import { CoreModule } from '@app/core/core.module';
 import { Task, TaskSchema } from './entities/task.entity';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Connection } from 'mongoose';
 
 @Module({})
 export class TaskModule {
@@ -24,6 +26,11 @@ export class TaskModule {
         TaskRepository,
         ...TaskCommandHandlers,
         ...TaskQueryHandlers,
+        {
+          provide: Connection,  // Provide the `Connection` object using `getConnectionToken`
+          useFactory: (connection: Connection) => connection,
+          inject: [getConnectionToken()],
+        },
       ],
       controllers: [TaskController],
       exports: [
