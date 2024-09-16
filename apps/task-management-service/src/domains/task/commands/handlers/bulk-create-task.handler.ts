@@ -5,7 +5,7 @@ import { CreateTaskDto } from '../../dto/create-task.dto';
 import { Connection, ClientSession } from 'mongoose';
 import { TaskRepository } from '../../repositories/task.repository';
 import { Logger } from '@app/core/common/logger/logger.service';
-import { parseExcelToJson } from '@app/domains/shared/utils/excel.util';
+import { parseCsvToJson } from '@app/domains/shared/utils/excel.util';
 
 @CommandHandler(BulkCreateTaskCommand)
 export class BulkCreateTaskHandler implements ICommandHandler<BulkCreateTaskCommand> {
@@ -19,9 +19,7 @@ export class BulkCreateTaskHandler implements ICommandHandler<BulkCreateTaskComm
     const { fileBuffer } = command;  // Assuming fileBuffer is passed in the command
 
     // Convert Excel buffer to JSON using the utility function
-    console.log(fileBuffer,'@#@#@#');
-    const tasks: CreateTaskDto[] = parseExcelToJson(fileBuffer);
-    console.log(tasks,'@#@#@#');
+    const tasks: CreateTaskDto[] = await parseCsvToJson(fileBuffer);
 
     // Call the method to bulk insert the tasks with transaction management
     return this.bulkInsertWithRetryAndLogging(tasks);
