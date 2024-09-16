@@ -4,6 +4,7 @@ import { Person, data as personData } from "./dummy/examples"; // Import your da
 import { Task, tasks as taskData } from "./dummy/task"; // Import your data
 import { Button } from "@mui/material";
 import { CustomTable } from "./Components/MaterialTable";
+import MuiTableWithProviders from "./Components/MuiTable";
 
 const App = () => {
   // Example actions you may want to add for each row
@@ -29,7 +30,8 @@ const App = () => {
 
   return (
     <div>
-      <h2>Person Data Table</h2>
+      <MuiTableWithProviders/>
+      {/* <h2>Person Data Table</h2>
       <CustomTable
         data={personData}
         actionsHeader={<Button variant="contained">Add Person</Button>} // Action for header
@@ -39,7 +41,7 @@ const App = () => {
       <CustomTable
         data={taskData}
         actionsHeader={<Button variant="contained">Add Task</Button>} // Action for header
-      />
+      /> */}
     </div>
   );
 };
