@@ -55,11 +55,12 @@ export class TaskController {
   }
 
   @Post('bulk-create')
-  @UseInterceptors(FileInterceptor('file', MulterConfig('tasks')))
+  @UseInterceptors(FileInterceptor('file'))
   async bulkCreate(@UploadedFile() file:any): Promise<any> {
     if (!file) {
       throw new BadRequestException('File is required');
     }
+    console.log(file,'@#@#')
     // Pass the file buffer to the service
     return this.taskService.bulkCreateTasks(file.buffer);
   }
