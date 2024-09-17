@@ -37,7 +37,7 @@ export class TasksUpdateBatchedEventHandler implements IEventHandler<TasksUpdate
 
     try {
       // Step 2: Publish the update batch to Kafka and handle response
-      const response = await this.kafkaService.publish('task-update-batch-topic', tasks);
+      const response = await this.kafkaService.publish('batch.task.create', tasks);
       this.logger.log(`Successfully published update batch ${batchNumber} to Kafka, response: ${response}`);
 
       // Step 3: Update Job entity on success

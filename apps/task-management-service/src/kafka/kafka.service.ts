@@ -11,8 +11,9 @@ export class KafkaService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    
+    this.kafkaClient.subscribeToResponseOf('batch.task.create');
     await this.kafkaClient.connect();
-    this.kafkaClient.subscribeToResponseOf('task-batch-response');
   }
 
   async publish(topic: string, message: any): Promise<any> {
