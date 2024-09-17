@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { LoggerModule } from './common/logger/logger.module';
 import { ConfigModule } from '@nestjs/config';
-
+@Global()
 @Module({
   imports: [LoggerModule], // Import the MinioModule if it's not globally available
   providers: [],

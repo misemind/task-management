@@ -8,8 +8,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SocketModule } from '@app/socket/socket.module';
 import { KafkaModule } from '@app/kafka/kafka.module';
 import { RedisModule } from '@app/redis/redis.module';
+import { JobModule } from './domains/job/job.module';
+
 @Module({
-  imports: [TaskModule.forRoot(), KafkaModule,SocketModule,
+  imports: [TaskModule.forRoot(),
+    JobModule, 
+    KafkaModule,
+    SocketModule,
     RedisModule,
     ConfigModule.forRoot({
     isGlobal: true,

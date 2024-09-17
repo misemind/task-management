@@ -8,8 +8,10 @@ import { TaskCommandHandlers } from './commands';
 import { TaskQueryHandlers } from './queries';
 import { CoreModule } from '@app/core/core.module';
 import { Task, TaskSchema } from './entities/task.entity';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Connection } from 'mongoose';
+import { TaskEventHandlers } from './events';
+import { Kafka } from 'kafkajs';
+import { KafkaModule } from '@app/kafka/kafka.module';
 
 @Module({})
 export class TaskModule {
@@ -20,12 +22,14 @@ export class TaskModule {
         MongooseModule.forFeature([{ name: Task.name, schema: TaskSchema }]),
         CqrsModule,
         CoreModule,
+        KafkaModule,
       ],
       providers: [
         TaskService,
         TaskRepository,
         ...TaskCommandHandlers,
         ...TaskQueryHandlers,
+        ...TaskEventHandlers,
         {
           provide: Connection,  // Provide the `Connection` object using `getConnectionToken`
           useFactory: (connection: Connection) => connection,
@@ -38,6 +42,7 @@ export class TaskModule {
         TaskRepository,
         ...TaskCommandHandlers,
         ...TaskQueryHandlers,
+        ...TaskEventHandlers
       ],
     };
   }

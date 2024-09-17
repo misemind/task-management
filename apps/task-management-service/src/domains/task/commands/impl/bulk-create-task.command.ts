@@ -1,5 +1,6 @@
-import { ICommand } from "@nestjs/cqrs";
+import { ICommand } from '@nestjs/cqrs';
+import { CreateTaskDto } from '../../dto/create-task.dto';
 
-export class BulkCreateTaskCommand implements ICommand {
-  constructor(public readonly fileBuffer: Buffer) {}
+export class BulkCreateTasksCommand implements ICommand {
+  constructor(public readonly tasks: CreateTaskDto[]) {}
 }
