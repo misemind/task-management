@@ -15,43 +15,19 @@ export class TasksBatchedEventHandler implements IEventHandler<TasksBatchedEvent
   ) {}
 
   async handle(event: TasksBatchedEvent): Promise<void> {
-    const { tasks, batchNumber } = event;
-    this.logger.log(`Processing batch ${batchNumber} for task creation...`);
+    const { tasks, batchNumber, jobObjectId } = event;
+    this.logger.log(`Processing batch ${batchNumber} for task creation... ${tasks.length}`);
 
-    // Step 1: Create Job entity
-    const createJobDto: CreateJobDto = {
-        jobId: `job-${Date.now()}`,
-        totalTasks: tasks.length,
-        totalBatches: 1,
-        completedTasks: 0,
-        failedTasks: 0,
-        completedBatches: 0,
-        failedBatches: 0,
-        status: 'IN_PROGRESS',
-        createdAt: new Date(),
-        batchErrors: []
-    };
-
-    const job = await this.jobService.createJob(createJobDto); // Create the Job entity
-    this.logger.log(`Job created with ID: ${job.jobId}`);
 
     try {
-      // Step 2: Publish the batch to Kafka and handle response
-      const response = await this.kafkaService.publish('batch.task.create', tasks);
+      const response = await this.kafkaService.publish('batch.task.create', {batchTasks: tasks, jobId: jobObjectId, batchNumber});
       this.logger.log(`Successfully published batch ${batchNumber} to Kafka, response: ${response}`);
 
-      // Step 3: Update Job entity on success
-      await this.jobService.updateJob(job.jobId, {
-        completedTasks: tasks.length,
-        completedBatches: 1,
-        status: 'COMPLETED',
-        completedAt: new Date(),
-      });
       this.logger.log(`Job updated with success for batch ${batchNumber}`);
     } catch (error) {
       // Step 4: Handle failure and update Job entity
       this.logger.error(`Failed to publish batch ${batchNumber}: ${error.message}`);
-      await this.jobService.updateJob(job.jobId, {
+      await this.jobService.updateJob(jobObjectId, {
         failedTasks: tasks.length,
         failedBatches: 1,
         status: 'FAILED',

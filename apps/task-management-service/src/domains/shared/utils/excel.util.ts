@@ -46,7 +46,7 @@ export const parseXlsxToJson = (buffer: Buffer): any[] => {
     }
 
     // Convert sheet to JSON format
-    const jsonData: any[] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+    const jsonData: any[] = xlsx.utils.sheet_to_json(sheet, { header: 0 });
 
     if (!jsonData || jsonData.length === 0) {
       throw new BadRequestException('The XLSX file does not contain any valid data');

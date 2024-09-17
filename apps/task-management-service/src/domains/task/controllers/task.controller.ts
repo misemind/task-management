@@ -9,6 +9,7 @@ import { BulkTaskDto } from '../dto/bulk-task.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterConfig } from '@app/config/multerConfig';
 import * as multer from 'multer';
+import { Express } from 'express'; 
 
 @ApiTags('Task')
 @Controller('api/tasks')
@@ -59,27 +60,26 @@ export class TaskController {
   @ApiOperation({ summary: 'Bulk create tasks via CSV or XLSX file' })
   @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-create-tasks'))) // Use multer config
   async bulkCreate(@UploadedFile() file: Express.Multer.File): Promise<any> {
-    console.log('**** ', file)
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
     // Pass the file buffer and mimetype to the service for processing
-    return this.taskService.bulkCreateTasks(file.buffer, file.mimetype);
+    return this.taskService.processUploadedFile(file.path, file.mimetype);
   }
 
-  @Post('bulk-update')
-  @ApiOperation({ summary: 'Bulk update tasks via CSV or XLSX file' })
-  @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-update-tasks'))) // Use multer config
-  async bulkUpdate(@UploadedFile() file: Express.Multer.File): Promise<any> {
+  // @Post('bulk-update')
+  // @ApiOperation({ summary: 'Bulk update tasks via CSV or XLSX file' })
+  // @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-update-tasks'))) // Use multer config
+  // async bulkUpdate(@UploadedFile() file: Express.Multer.File): Promise<any> {
     
-    if (!file) {
-      throw new BadRequestException('File is required');
-    }
+  //   if (!file) {
+  //     throw new BadRequestException('File is required');
+  //   }
 
-    // Pass the file buffer and mimetype to the service for processing
-    return this.taskService.bulkUpdateTasks(file.buffer, file.mimetype);
-  }
+  //   // Pass the file buffer and mimetype to the service for processing
+  //   return this.taskService.bulkUpdateTasks(file.path, file.mimetype);
+  // }
     // ---------------- Kafka Handlers ------------------
 
   // // Kafka Event: Create Task
@@ -121,23 +121,25 @@ export class TaskController {
    @MessagePattern('batch.task.create')
    async handleBulkCreateTasks(@Payload() message: any, @Ctx() context: KafkaContext): Promise<any> {
      console.log('Received Kafka Message for batch.task.create', message);
+     await this.taskService.bulkCreateTasks(message);
+
     //  return {}
-     const responseMessage = { status: 'success', message: `Successfully processed 4 tasks.` };
+    //  const responseMessage = { status: 'success', message: `Successfully processed 4 tasks.` };
 
-    // Send the response to the reply topic
-    const producer = context.getProducer();
-    producer.connect();
-    const replyTopic = 'batch.task.create';
+    // // Send the response to the reply topic
+    // const producer = context.getProducer();
+    // producer.connect();
+    // const replyTopic = 'batch.task.create';
 
-    producer.send({
-      topic: replyTopic,
-      messages: [
-        {
-          key: 'task-create-reply',
-          value: JSON.stringify(responseMessage),
-        },
-      ],
-    });
+    // producer.send({
+    //   topic: replyTopic,
+    //   messages: [
+    //     {
+    //       key: 'task-create-reply',
+    //       value: JSON.stringify(responseMessage),
+    //     },
+    //   ],
+    // });
    }
  
 }

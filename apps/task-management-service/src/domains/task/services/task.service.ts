@@ -8,8 +8,12 @@ import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { GetAllTasksQuery } from '@app/domains/task/queries/impl/get-all-tasks.query';
 import { GetTaskByIdQuery } from '@app/domains/task/queries/impl/get-task-by-id.query';
 import { Logger } from '@app/core/common/logger/logger.service';
-import { BulkCreateTasksCommand } from '../commands/impl/bulk-create-task.command';
+import { ProcessTasksUplaodedFileCommand } from '../commands/impl/process-task-uploaded-file.command';
 import { BulkUpdateTasksCommand } from '../commands/impl/bulk-update-task.command';
+import * as fs from 'fs';
+import { plainToInstance } from 'class-transformer';
+import { validateOrReject } from 'class-validator';
+import { BulkCreateTasksCommand } from '../commands/impl/bulk-create-task.command';
 
 @Injectable()
 export class TaskService {
@@ -105,14 +109,35 @@ export class TaskService {
     }
   }
 
-  async bulkCreateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
-  
+  async processUploadedFile(filePath: string, mimetype: string): Promise<any> {
+    const fileBuffer = fs.readFileSync(filePath);
     // Pass the file buffer and mimetype to the command
-    return this.commandBus.execute(new BulkCreateTasksCommand(fileBuffer, mimetype));
+    return this.commandBus.execute(new ProcessTasksUplaodedFileCommand(fileBuffer, mimetype));
   }
 
-  async bulkUpdateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+  async bulkUpdateTasks(filePath: string, mimetype: string): Promise<any> {
+    const fileBuffer = fs.readFileSync(filePath);
     // Pass the file buffer and mimetype to the command
     return this.commandBus.execute(new BulkUpdateTasksCommand(fileBuffer, mimetype));
+  }
+
+  async bulkCreateTasks(message: any) {
+    const {batchTasks, jobId, batchNumber} = message;
+    const taskDtos  = [];
+    for (let i=0; i<batchTasks.length; i++) {
+      const createTaskDTO = await this.createTaskDTO(batchTasks[i]);
+      taskDtos.push(createTaskDTO);
+    }
+    return this.commandBus.execute(new BulkCreateTasksCommand(taskDtos, jobId, batchNumber));
+  }
+
+  async createTaskDTO(taskData: any): Promise<CreateTaskDto> {
+    const taskDto = plainToInstance(CreateTaskDto, taskData);
+    try {
+      await validateOrReject(taskDto);
+      return taskDto;
+    } catch (errors) {
+      throw new Error(`Validation failed: ${JSON.stringify(errors)}`);
+    }
   }
 }
