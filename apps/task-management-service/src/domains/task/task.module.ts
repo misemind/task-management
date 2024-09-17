@@ -12,6 +12,7 @@ import { Connection } from 'mongoose';
 import { TaskEventHandlers } from './events';
 import { Kafka } from 'kafkajs';
 import { KafkaModule } from '@app/kafka/kafka.module';
+import { JobModule } from '../job/job.module';
 
 @Module({})
 export class TaskModule {
@@ -23,6 +24,7 @@ export class TaskModule {
         CqrsModule,
         CoreModule,
         KafkaModule,
+        JobModule,
       ],
       providers: [
         TaskService,

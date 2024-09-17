@@ -1,3 +1,4 @@
+// ../apps/task-management-service/src/domains/job/dto/create-job.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNumber, IsDate, IsArray, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';

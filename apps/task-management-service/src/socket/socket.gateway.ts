@@ -25,7 +25,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('message.send')
   async handleMessageSend(@MessageBody() message: any): Promise<void> {
-    await this.kafkaService.sendMessage('queue.message.send', message);
+    await this.kafkaService.publish('queue.message.send', message);
     console.log(`Message sent to Kafka topic "queue.message.send": ${JSON.stringify(message)}`);
   }
 }
