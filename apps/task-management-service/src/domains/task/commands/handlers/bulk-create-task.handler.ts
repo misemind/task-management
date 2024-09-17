@@ -81,7 +81,6 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     const { tasks, jobId, batchNumber } = command;
     try {
       const inserted = await this.bulkInsertWithRetryAndLogging(tasks);
-      console.log('### ', inserted)
       if (inserted) {
         const job = await this.jobService.getJobById(jobId);
         let updateStatus = {};
