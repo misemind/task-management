@@ -12,15 +12,14 @@ export class TasksBatchedEventHandler implements IEventHandler<TasksBatchedEvent
     private readonly kafkaService: KafkaService,
     private readonly jobService: JobService, // Inject JobService
     private readonly logger: Logger
-  ) {}
+  ) { }
 
   async handle(event: TasksBatchedEvent): Promise<void> {
     const { tasks, batchNumber, jobObjectId } = event;
     this.logger.log(`Processing batch ${batchNumber} for task creation... ${tasks.length}`);
 
-
     try {
-      const response = await this.kafkaService.publish('batch.task.create', {batchTasks: tasks, jobId: jobObjectId, batchNumber});
+      const response = await this.kafkaService.publish('batch.task.create', { batchTasks: tasks, jobId: jobObjectId, batchNumber });
       this.logger.log(`Successfully published batch ${batchNumber} to Kafka, response: ${response}`);
 
       this.logger.log(`Job updated with success for batch ${batchNumber}`);

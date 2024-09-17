@@ -120,7 +120,7 @@ export class TaskController {
    //Kafka Request-Response: Create Bulk Tasks
    @MessagePattern('batch.task.create')
    async handleBulkCreateTasks(@Payload() message: any, @Ctx() context: KafkaContext): Promise<any> {
-     console.log('Received Kafka Message for batch.task.create', message);
+     console.log('Received Kafka Message for batch.task.create');
      await this.taskService.bulkCreateTasks(message);
 
     //  return {}

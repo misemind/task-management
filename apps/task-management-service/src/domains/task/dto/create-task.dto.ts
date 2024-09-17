@@ -3,6 +3,9 @@ import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsDate, IsEnum } from 'class-validator';
 
 export class CreateTaskDto {
+
+  id?: string;
+
   @ApiProperty({ description: 'Title of the task' })
   @IsString()
   @IsNotEmpty()

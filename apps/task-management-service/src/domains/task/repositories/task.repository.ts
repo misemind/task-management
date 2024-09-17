@@ -42,4 +42,12 @@ export class TaskRepository {
       throw new Error('Failed to insert tasks in bulk: ' + error.message);
     }
   }
+
+  async bulkWrite(operations: any[], options: { session: ClientSession }): Promise<any> {
+    try {
+      return await this.taskModel.bulkWrite(operations, options);
+    } catch (error) {
+      throw new Error('Failed to perform bulkWrite operation: ' + error.message);
+    }
+  }
 }

@@ -31,7 +31,7 @@ export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessT
     }
 
     // Process tasks in batches of 100
-    const batchSize = 1;
+    const batchSize = 100;
     const batches = [];
 
     for (let i = 0; i < tasks.length; i += batchSize) {

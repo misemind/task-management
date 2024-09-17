@@ -26,20 +26,44 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     let attempts = 0;
     const maxRetries = 3;
 
+    // Prepare bulk operations for MongoDB's bulkWrite method
+    const bulkOperations = tasks.map(task => {
+      if (task.id) {
+        // If there's an id, we perform an upsert (update if exists, insert if not)
+        return {
+          updateOne: {
+            filter: { _id: task.id },  // Assuming task.id is mapped to _id in MongoDB
+            update: { $set: task },   // Update the existing task
+            upsert: true,  // Insert if the document doesn't exist
+          }
+        };
+      } else {
+        // If there's no id, it's an insert
+        return {
+          insertOne: {
+            document: task,  // Insert new document
+          }
+        };
+      }
+    });
+
     try {
       while (attempts < maxRetries) {
         try {
-          const result = await this.taskRepository.insertMany(tasks, { session });
+          // Use bulkWrite for both insert and update operations in one call
+          const result = await this.taskRepository.bulkWrite(bulkOperations, { session });
+
+          // Commit transaction if successful
           await session.commitTransaction();
           return result;
         } catch (error) {
           attempts++;
-          this.logger.error(`Attempt ${attempts}: Bulk insert failed: ${error.message}`, error.stack);
+          this.logger.error(`Attempt ${attempts}: Bulk operation failed: ${error.message}`, error.stack);
 
           if (attempts >= maxRetries) {
-            await session.abortTransaction();
+            // await session.abortTransaction();
             this.logger.log('Max retries reached, aborting transaction.');
-            throw new InternalServerErrorException('Bulk insert failed after max retries.');
+            throw new InternalServerErrorException('Bulk operation failed after max retries.');
           }
         }
       }
@@ -52,11 +76,13 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     }
   }
 
+
   async execute(command: BulkCreateTasksCommand): Promise<void> {
     const { tasks, jobId, batchNumber } = command;
     try {
       const inserted = await this.bulkInsertWithRetryAndLogging(tasks);
-      if (inserted && inserted.length > 0) {
+      console.log('### ', inserted)
+      if (inserted) {
         const job = await this.jobService.getJobById(jobId);
         let updateStatus = {};
         if (batchNumber >= job.totalBatches) {
