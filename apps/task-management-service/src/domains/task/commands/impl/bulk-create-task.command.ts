@@ -1,6 +1,7 @@
+// ../apps/task-management-service/src/domains/task/commands/impl/bulk-create-task.command.ts
 import { ICommand } from '@nestjs/cqrs';
-import { CreateTaskDto } from '../../dto/create-task.dto';
 
 export class BulkCreateTasksCommand implements ICommand {
-  constructor(public readonly tasks: CreateTaskDto[]) {}
+  constructor(public readonly fileBuffer: Buffer, public readonly mimetype: string) {}
 }
+

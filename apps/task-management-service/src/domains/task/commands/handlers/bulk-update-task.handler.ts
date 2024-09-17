@@ -1,17 +1,34 @@
-// ../apps/task-management-service/src/domains/task/commands/handlers/bulk-update-task.handler.ts
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { BulkUpdateTasksCommand } from '../impl/bulk-update-task.command';
 import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
 import { Logger } from '@app/core/common/logger/logger.service';
-
+import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
 
 @CommandHandler(BulkUpdateTasksCommand)
 export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCommand> {
-  constructor(private readonly eventBus: EventBus, private readonly logger: Logger) {}
+  constructor(
+    private readonly eventBus: EventBus,
+    private readonly logger: Logger,
+  ) {}
 
   async execute(command: BulkUpdateTasksCommand): Promise<void> {
-    const { tasks } = command;
-    const batchSize = 100; // Process 100 tasks per batch
+    const { fileBuffer, mimetype } = command;
+
+    // Convert the file to tasks JSON based on mimetype
+    let tasks: any[];
+    if (mimetype === 'text/csv') {
+      tasks = parseCsvToJson(fileBuffer);
+      this.logger.log('File parsed as CSV');
+    } else if (mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      tasks = parseXlsxToJson(fileBuffer);
+      this.logger.log('File parsed as XLSX');
+    } else {
+      this.logger.error('Unsupported file type');
+      throw new Error('Unsupported file type');
+    }
+
+    // Process tasks in batches of 100
+    const batchSize = 100;
     const batches = [];
 
     for (let i = 0; i < tasks.length; i += batchSize) {
@@ -24,5 +41,7 @@ export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCo
       this.logger.log(`Emitting TasksUpdateBatchedEvent for batch ${index + 1}`);
       this.eventBus.publish(new TasksUpdateBatchedEvent(batch, index + 1));
     });
+
+    this.logger.log(`Successfully processed ${tasks.length} tasks in ${batches.length} batches.`);
   }
 }

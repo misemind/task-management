@@ -9,6 +9,7 @@ import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
 
 import { Logger } from '@app/core/common/logger/logger.service';
 import { GetJobByIdQuery } from '../queries/impl/get-job-by-id.query';
+import { GetAllJobsQuery } from '../queries/impl/get-all-jobs.query';
 
 @Injectable()
 export class JobService {
@@ -67,6 +68,20 @@ export class JobService {
       }
       this.logger.error('Failed to delete job', error.stack);
       throw new InternalServerErrorException('Failed to delete job', error);
+    }
+  }
+  async getAllJobs(limit = 10, page = 1) {
+    try {
+      this.logger.log(`Retrieving all jobs with limit: ${limit}, page: ${page}`);
+
+      const { data, total } = await this.queryBus.execute(new GetAllJobsQuery(limit, page));
+
+      this.logger.log(`Retrieved ${data.length} jobs with total count: ${total}`);
+
+      return { data, total };
+    } catch (error) {
+      this.logger.error('Failed to retrieve jobs', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve jobs', error);
     }
   }
 

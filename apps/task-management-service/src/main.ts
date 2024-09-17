@@ -59,10 +59,7 @@ async function bootstrap() {
   const consumerGroupId = configService.get<string>('kafka.consumerGroupId');
   
   // Console log the values to debug
-  console.log('Kafka Broker URL:', brokerUrl);
-  console.log('Kafka Username:', username);
-  console.log('Kafka Password:', password);
-  console.log('Kafka Consumer Group ID:', consumerGroupId);
+
   
   const kafkaMicroservice = app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,

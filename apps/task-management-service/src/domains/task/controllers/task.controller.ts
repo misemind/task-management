@@ -55,19 +55,27 @@ export class TaskController {
   }
 
   @Post('bulk-create')
-  @UseInterceptors(FileInterceptor('file'))
-  async bulkCreate(@UploadedFile() file:any): Promise<any> {
+  @ApiOperation({ summary: 'Bulk create tasks via CSV or XLSX file' })
+  @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-create-tasks'))) // Use multer config
+  async bulkCreate(@UploadedFile() file: Express.Multer.File): Promise<any> {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    console.log(file,'@#@#')
-    // Pass the file buffer to the service
-    return this.taskService.bulkCreateTasks(file.buffer);
+
+    // Pass the file buffer and mimetype to the service for processing
+    return this.taskService.bulkCreateTasks(file.buffer, file.mimetype);
   }
 
-  @Put('bulk-update')
-  async bulkUpdate(@Body() bulkTaskDto: BulkTaskDto): Promise<any> {
-    return this.taskService.bulkUpdateTasks(bulkTaskDto.tasks);
+  @Post('bulk-update')
+  @ApiOperation({ summary: 'Bulk update tasks via CSV or XLSX file' })
+  @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-update-tasks'))) // Use multer config
+  async bulkUpdate(@UploadedFile() file: Express.Multer.File): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    // Pass the file buffer and mimetype to the service for processing
+    return this.taskService.bulkUpdateTasks(file.buffer, file.mimetype);
   }
     // ---------------- Kafka Handlers ------------------
 

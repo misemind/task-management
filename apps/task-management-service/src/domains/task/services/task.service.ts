@@ -106,31 +106,13 @@ export class TaskService {
     }
   }
 
-  async bulkCreateTasks(fileBuffer: Buffer): Promise<any> {
-    try {
-      this.logger.log('Starting bulk task creation from Excel file');
-
-      // Pass the file buffer to the command
-      const tasks = await this.commandBus.execute(new BulkCreateTasksCommand([]));
-
-      this.logger.log(`Successfully created tasks`);
-      return tasks;
-    } catch (error) {
-      this.logger.error('Failed to bulk create tasks', error.stack);
-      throw new InternalServerErrorException('Failed to bulk create tasks', error);
-    }
+  async bulkCreateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+    // Pass the file buffer and mimetype to the command
+    return this.commandBus.execute(new BulkCreateTasksCommand(fileBuffer, mimetype));
   }
 
-  // Bulk update tasks
-  async bulkUpdateTasks(updateTaskDtos: UpdateTaskDto[]) {
-    try {
-      this.logger.log(`Updating multiple tasks with data: ${JSON.stringify(updateTaskDtos)}`);
-      const tasks = await this.commandBus.execute(new BulkUpdateTasksCommand(updateTaskDtos));
-      this.logger.log(`Successfully updated ${tasks.length} tasks`);
-      return tasks;
-    } catch (error) {
-      this.logger.error('Failed to bulk update tasks', error.stack);
-      throw new InternalServerErrorException('Failed to bulk update tasks', error);
-    }
+  async bulkUpdateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+    // Pass the file buffer and mimetype to the command
+    return this.commandBus.execute(new BulkUpdateTasksCommand(fileBuffer, mimetype));
   }
 }

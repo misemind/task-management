@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
 import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
@@ -7,7 +7,7 @@ import { JobService } from '@app/domains/job/services/job.service';
 @ApiTags('Job')
 @Controller('api/jobs')
 export class JobController {
-  constructor(private readonly jobService: JobService) {}
+  constructor(private readonly jobService: JobService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new job' })
@@ -39,5 +39,12 @@ export class JobController {
   @ApiResponse({ status: 404, description: 'Job not found.' })
   remove(@Param('id') id: string) {
     return this.jobService.deleteJob(id);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all jobs with pagination' })
+  @ApiResponse({ status: 200, description: 'Return all jobs with pagination.' })
+  findAll(@Query('limit') limit: number = 10, @Query('page') page: number = 1) {
+    return this.jobService.getAllJobs(limit, page);
   }
 }
