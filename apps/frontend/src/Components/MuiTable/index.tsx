@@ -1,222 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  MRT_EditActionButtons,
-  MaterialReactTable,
-  type MRT_ColumnDef,
-  type MRT_Row,
-  type MRT_TableOptions,
-  useMaterialReactTable,
-} from 'material-react-table';
-import {
-  Box,
-  Button,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
 import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
-
-const Base_URL = 'http://localhost:4000';
-
-type Task = {
-  title: string;
-  priority: string;
-  status: string;
-  description: string;
-  deadline: Date;
-};
-
-const MuiTable = () => {
-  const [tasks, setTasks] = useState<any>([]);
-  const [total, setTotal] = useState<number>(0)
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${Base_URL}/api/tasks?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`);
-      setTasks(response.data.data);
-      setTotal(response.data.total);
-      setError('');
-    } catch (err) {
-      setError('Failed to fetch tasks');
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
-  const deleteTask = async (id: any) => {
-    try {
-      await axios.delete(`${Base_URL}/api/tasks/${id}`);
-      setTasks((prev: any) => prev.filter((task: any) => task._id !== id));
-    } catch (err) {
-      console.error('Failed to delete task:', err);
-    }
-  };
-
-
-  const createTask = async (task: any) => {
-    try {
-      const response = await axios.post(`${Base_URL}/api/tasks`, task);
-      setTasks((prev: any) => [...prev, response.data.data]);
-
-    } catch (err) {
-      console.error('Failed to create task:', err);
-    }
-  };
-
-  const updateTask = async (id: any, values: any) => {
-    try {
-      const response = await axios.put(`${Base_URL}/api/tasks/${id}`, values);
-      setTasks((prev: any) => prev.map((task: any) => task._id === id ? response.data.data : task));
-    } catch (err) {
-      console.error('Failed to update task:', err);
-    }
-  };
-  const openDeleteConfirmModal = (row: MRT_Row<any>) => {
-    // if (window.confirm('Are you sure you want to delete this user?')) {
-    deleteTask(row.original._id);
-    // }
-  };
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const columns = useMemo<MRT_ColumnDef<Task>[]>(() => [
-    { accessorKey: 'title', header: 'Title' },
-    {
-      accessorKey: 'priority',
-      header: 'Priority',
-      editVariant: 'select',
-      editSelectOptions: ['Low', "Medium"]
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      editVariant: 'select',
-      editSelectOptions: ['To Do', 'In Progress']
-    },
-    { accessorKey: 'description', header: 'Description' },
-    {
-      accessorKey: 'deadline',
-      header: 'Deadline',
-
-    }
-  ], []);
-
-  useEffect(() => {
-    console.log(pagination, '@#@#@#@#')
-    fetchTasks();
-  }, [pagination])
-
-  const table = useMaterialReactTable({
-    columns,
-    data: tasks,
-    editDisplayMode: 'modal',
-    enableEditing: true,
-    enableRowActions: true,
-    getRowId: (row: any) => row._id,
-
-    onCreatingRowSave: async ({ values, table }) => {
-      await createTask(values);
-      table.setCreatingRow(null);
-    },
-    onEditingRowSave: async ({ values, table, row }: any) => {
-      await updateTask(row.original._id, values);
-      table.setEditingRow(null);
-    },
-    renderCreateRowDialogContent: ({ table, row, internalEditComponents }) => (
-      <>
-
-        <DialogTitle variant="h3">Create New User</DialogTitle>
-        <DialogContent
-          sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-        >
-          {internalEditComponents} {/* or render custom edit components here */}
-        </DialogContent>
-        <DialogActions>
-          <MRT_EditActionButtons variant="text" table={table} row={row} />
-        </DialogActions>
-      </>
-    ),
-    renderEditRowDialogContent: ({ table, row, internalEditComponents }) => (
-      <>
-        <DialogTitle variant="h3">Edit Task</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {internalEditComponents}
-        </DialogContent>
-        <DialogActions>
-          <MRT_EditActionButtons variant="text" table={table} row={row} />
-        </DialogActions>
-      </>
-    ),
-    renderRowActions: ({ row, table }) => (
-      <Box sx={{ display: 'flex', gap: '1rem' }}>
-        <Tooltip title="Edit">
-          <IconButton onClick={() => table.setEditingRow(row)}>
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton color="error" onClick={() => openDeleteConfirmModal(row)}>
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-    ),
-    renderTopToolbarCustomActions: ({ table }) => (
-      <Button
-        variant="contained"
-        onClick={() => {
-          table.setCreatingRow(true); // Open create row modal
-        }}
-      >
-        Create New Task
-      </Button>
-    ),
-    manualPagination: true,
-    rowCount: total,
-    state: {
-      isLoading: loading,
-      showAlertBanner: !!error,
-      showProgressBars: loading,
-      pagination
-    },
-    onPaginationChange: setPagination
-  });
-
-  return <Box sx={{
-    bottom: 0,
-    height: '100vh',
-    left: 0,
-    margin: 0,
-    maxHeight: '100vh',
-    maxWidth: '100vw',
-    padding: 0,
-    position: 'fixed',
-    right: 0,
-    top: 0,
-    width: '100vw',
-    zIndex: 999,
-  }}><MaterialReactTable table={table} /></Box>;
-};
-
+import { TaskMuiTable } from './task';
+import { JobsMuiTable } from './jobs';
+import { Tabs, Tab, Box } from '@mui/material';
+import { useState } from 'react';
 const queryClient = new QueryClient();
 
-const MuiTableWithProviders = () => (
-  <QueryClientProvider client={queryClient}>
-    <MuiTable />
-  </QueryClientProvider>
-);
+const MuiTableWithProviders = () => {
+  const [activeTab, setActiveTab] = useState('tasks');  // This will store the active tab
+
+  const handleTabChange = (event: any, newValue: any) => {
+    setActiveTab(newValue);
+    // You can also reset pagination here if needed
+  };
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <Tabs value={activeTab} onChange={handleTabChange} aria-label="Tabs for Tasks and Jobs">
+          <Tab label="Tasks" value="tasks" />
+          <Tab label="Jobs" value="jobs" />
+        </Tabs>
+        <Box sx={{
+          bottom: 0,
+          height: '90vh',
+          left: 0,
+          margin: 0,
+          maxHeight: '90vh',
+          maxWidth: '100vw',
+          padding: 0,
+          // position: 'fixed',
+          right: 0,
+          // top: 0,
+          width: '100vw',
+        }}>
+          {
+            activeTab === "tasks" ? <TaskMuiTable /> : <JobsMuiTable />
+          }
+        </Box>
+
+
+      </div>
+    </QueryClientProvider>
+  )
+};
 
 export default MuiTableWithProviders;
