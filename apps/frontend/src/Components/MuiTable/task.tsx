@@ -174,14 +174,17 @@ export const TaskMuiTable = () => {
             </Box>
         },
         renderTopToolbarCustomActions: ({ table }) => (
-            <Button
-                variant="contained"
-                onClick={() => {
-                    table.setCreatingRow(true); // Open create row modal
-                }}
-            >
-                Create New Task
-            </Button>
+            <>
+                <Button
+                    variant="contained"
+                    onClick={() => {
+                        table.setCreatingRow(true); // Open create row modal
+                    }}
+                >
+                    Create New Task
+                </Button>
+
+            </>
         ),
         manualPagination: true,
         rowCount: total,

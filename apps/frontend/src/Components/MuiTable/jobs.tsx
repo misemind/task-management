@@ -23,13 +23,17 @@ import axios from 'axios';
 
 const Base_URL = 'http://localhost:4000';
 
-type Task = {
-    title: string;
-    priority: string;
+type Jobs = {
+    totalTasks: number,
+    totalBatches: number,
+    completedTasks: number;
+    failedTasks: number;
+    completedBatches: number,
+    failedBatches: number,
     status: string;
-    description: string;
-    deadline: Date;
 };
+
+
 
 export const JobsMuiTable = () => {
     const [tasks, setTasks] = useState<any>([]);
@@ -42,7 +46,7 @@ export const JobsMuiTable = () => {
         setLoading(true);
         try {
             const response = await axios.get(`${Base_URL}/api/jobs?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`);
-            console.log("fetchTasks",response)
+            console.log("fetchTasks", response)
             setTasks(response?.data?.data);
             setTotal(response?.data?.total);
             setError('');
@@ -90,13 +94,11 @@ export const JobsMuiTable = () => {
         fetchTasks();
     }, []);
 
-    const columns = useMemo<MRT_ColumnDef<Task>[]>(() => [
-        { accessorKey: 'title', header: 'Title' },
+    const columns = useMemo<MRT_ColumnDef<Jobs>[]>(() => [
+        { accessorKey: 'totalTasks', header: 'TotalTasks' },
         {
-            accessorKey: 'priority',
-            header: 'Priority',
-            editVariant: 'select',
-            editSelectOptions: ['Low', "Medium"]
+            accessorKey: 'totalBatches',
+            header: 'totalBatches'
         },
         {
             accessorKey: 'status',
@@ -104,11 +106,18 @@ export const JobsMuiTable = () => {
             editVariant: 'select',
             editSelectOptions: ['To Do', 'In Progress']
         },
-        { accessorKey: 'description', header: 'Description' },
+        { accessorKey: 'completedTasks', header: 'CompletedTasks' },
         {
-            accessorKey: 'deadline',
-            header: 'Deadline',
-
+            accessorKey: 'failedTasks',
+            header: 'FailedTasks',
+        },
+        {
+            accessorKey: 'completedBatches',
+            header: 'completedBatches',
+        },
+        {
+            accessorKey: 'failedBatches',
+            header: 'failedBatches',
         }
     ], []);
 
@@ -119,8 +128,8 @@ export const JobsMuiTable = () => {
     const table = useMaterialReactTable({
         columns,
         data: tasks,
-        editDisplayMode: 'modal',
-        enableEditing: true,
+        // editDisplayMode: 'modal',
+        enableEditing: false,
         enableRowActions: true,
         getRowId: (row: any) => {
             console.log(row, '@#@#@#@#@#@#TTTTT')
@@ -162,11 +171,6 @@ export const JobsMuiTable = () => {
         renderRowActions: ({ row, table }) => {
             console.log(row, 'ROWS')
             return <Box sx={{ display: 'flex', gap: '1rem' }}>
-                <Tooltip title="Edit">
-                    <IconButton onClick={() => table.setEditingRow(row)}>
-                        <EditIcon />
-                    </IconButton>
-                </Tooltip>
                 <Tooltip title="Delete">
                     <IconButton color="error" onClick={() => openDeleteConfirmModal(row)}>
                         <DeleteIcon />
@@ -175,14 +179,16 @@ export const JobsMuiTable = () => {
             </Box>
         },
         renderTopToolbarCustomActions: ({ table }) => (
-            <Button
-                variant="contained"
-                onClick={() => {
-                    table.setCreatingRow(true); // Open create row modal
-                }}
-            >
-                Create New Jobs
-            </Button>
+            <>
+                <Button
+                    variant="contained"
+                    onClick={() => {
+                        table.setCreatingRow(true); // Open create row modal
+                    }}
+                >
+                    Create New Jobs
+                </Button>
+            </>
         ),
         manualPagination: true,
         rowCount: total,
