@@ -1,9 +1,7 @@
-
 import { useEffect, useMemo, useState } from 'react';
 import {
   MRT_EditActionButtons,
   MaterialReactTable,
-  // createRow,
   type MRT_ColumnDef,
   type MRT_Row,
   type MRT_TableOptions,
@@ -25,129 +23,118 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
-// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
 
 const Base_URL = 'http://localhost:4000';
 
-const MuiTable = () => {
-  const [tasks, setTasks] = useState<any>([])
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string | undefined>
-  >({});
-  const [deadline, setDeadline] = useState<dayjs.Dayjs | any>(null);
-  // const limit = 5
+type Task = {
+  title: string;
+  priority: string;
+  status: string;
+  description: string;
+  deadline: Date;
+};
 
-  // get all tasks
-  const getAllTasks = async () => {
-    const response = await axios.get(`${Base_URL}/api/tasks`);
-    setTasks(response?.data?.data)
+const MuiTable = () => {
+  const [tasks, setTasks] = useState<any>([]);
+  const [total, setTotal] = useState<number>(0)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${Base_URL}/api/tasks?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`);
+      setTasks(response.data.data);
+      setTotal(response.data.total);
+      setError('');
+    } catch (err) {
+      setError('Failed to fetch tasks');
+      console.error(err);
+    }
+    setLoading(false);
   };
 
-  // delete task
   const deleteTask = async (id: any) => {
     try {
-      const res = await axios.delete(`${Base_URL}/api/tasks/${id}`)
-      console.log('deleteTask', res)
-    } catch (error) {
-      console.log("deleteTasksfhslkfshf", error)
-
-    }
-  }
-
-  const handleCreateUser: MRT_TableOptions<any>['onCreatingRowSave'] = async ({
-    values,
-    table,
-  }) => {
-    // Remove the id field from values before sending to the backend
-    const { id, ...task } = values;
-    try {
-      const res = await axios.post(`${Base_URL}/api/tasks`, task); // Send data without 'id'
-      console.log('User created successfully:', res.data);
-      table.setCreatingRow(null); // Exit creating mode after successful creation
-    } catch (error) {
-      console.error('Error creating user:', error);
+      await axios.delete(`${Base_URL}/api/tasks/${id}`);
+      setTasks((prev: any) => prev.filter((task: any) => task._id !== id));
+    } catch (err) {
+      console.error('Failed to delete task:', err);
     }
   };
 
-  //UPDATE action
-  const handleEditTask: MRT_TableOptions<any>['onEditingRowSave'] = async ({
-    values,
-    table,
-    row,
-  }) => {
-    const { _id } = row?.original
+
+  const createTask = async (task: any) => {
     try {
-      const response = await axios.put(`${Base_URL}/api/tasks/${_id}`, values);
-      console.log('Task updated successfully:', response.data);
-      table.setEditingRow(null); // Close the edit dialog
-    } catch (error) {
-      console.error('Error updating task:', error);
+      const response = await axios.post(`${Base_URL}/api/tasks`, task);
+      setTasks((prev: any) => [...prev, response.data.data]);
+
+    } catch (err) {
+      console.error('Failed to create task:', err);
     }
   };
 
-  //DELETE action
+  const updateTask = async (id: any, values: any) => {
+    try {
+      const response = await axios.put(`${Base_URL}/api/tasks/${id}`, values);
+      setTasks((prev: any) => prev.map((task: any) => task._id === id ? response.data.data : task));
+    } catch (err) {
+      console.error('Failed to update task:', err);
+    }
+  };
   const openDeleteConfirmModal = (row: MRT_Row<any>) => {
     // if (window.confirm('Are you sure you want to delete this user?')) {
-    console.log("deleletete", row?.original?._id)
     deleteTask(row.original._id);
     // }
   };
   useEffect(() => {
-    getAllTasks()
-  }, [])
+    fetchTasks();
+  }, []);
 
+  const columns = useMemo<MRT_ColumnDef<Task>[]>(() => [
+    { accessorKey: 'title', header: 'Title' },
+    {
+      accessorKey: 'priority',
+      header: 'Priority',
+      editVariant: 'select',
+      editSelectOptions: ['Low', "Medium"]
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      editVariant: 'select',
+      editSelectOptions: ['To Do', 'In Progress']
+    },
+    { accessorKey: 'description', header: 'Description' },
+    {
+      accessorKey: 'deadline',
+      header: 'Deadline',
 
-  const columns = useMemo<MRT_ColumnDef<any>[]>(
-    () => [
-      {
-        accessorKey: 'title',
-        header: 'Title',
+    }
+  ], []);
 
-      },
-      {
-        accessorKey: 'priority',
-        header: 'Priority',
-        editVariant: 'select',
-        editSelectOptions: ['Low', "Medium"]
+  useEffect(() => {
+    console.log(pagination, '@#@#@#@#')
+    fetchTasks();
+  }, [pagination])
 
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        editVariant: 'select',
-        editSelectOptions: ['To Do', 'In Progress']
-
-      },
-      {
-        accessorKey: 'description',
-        header: 'Description',
-      },
-      {
-        accessorKey: 'deadline',
-        header: 'Deadline',
-
-      },
-    ],
-    [validationErrors],
-  );
   const table = useMaterialReactTable({
     columns,
     data: tasks,
     editDisplayMode: 'modal',
     enableEditing: true,
     enableRowActions: true,
-    getRowId: (row) => row._id,
-    muiToolbarAlertBannerProps: undefined,
-    muiTableContainerProps: {
-      sx: {
-        minHeight: '500px',
-      },
+    getRowId: (row: any) => row._id,
+
+    onCreatingRowSave: async ({ values, table }) => {
+      await createTask(values);
+      table.setCreatingRow(null);
     },
-    onCreatingRowCancel: () => setValidationErrors({}),
-    onCreatingRowSave: handleCreateUser,
-    onEditingRowCancel: () => setValidationErrors({}),
-    onEditingRowSave: handleEditTask,
+    onEditingRowSave: async ({ values, table, row }: any) => {
+      await updateTask(row.original._id, values);
+      table.setEditingRow(null);
+    },
     renderCreateRowDialogContent: ({ table, row, internalEditComponents }) => (
       <>
 
@@ -160,8 +147,6 @@ const MuiTable = () => {
         <DialogActions>
           <MRT_EditActionButtons variant="text" table={table} row={row} />
         </DialogActions>
-
-
       </>
     ),
     renderEditRowDialogContent: ({ table, row, internalEditComponents }) => (
@@ -199,17 +184,31 @@ const MuiTable = () => {
         Create New Task
       </Button>
     ),
+    manualPagination: true,
+    rowCount: total,
     state: {
-      isLoading: false,
-      showAlertBanner: false,
-      showProgressBars: false,
+      isLoading: loading,
+      showAlertBanner: !!error,
+      showProgressBars: loading,
+      pagination
     },
+    onPaginationChange: setPagination
   });
 
-
-
-
-  return <MaterialReactTable table={table} />;
+  return <Box sx={{
+    bottom: 0,
+    height: '100vh',
+    left: 0,
+    margin: 0,
+    maxHeight: '100vh',
+    maxWidth: '100vw',
+    padding: 0,
+    position: 'fixed',
+    right: 0,
+    top: 0,
+    width: '100vw',
+    zIndex: 999,
+  }}><MaterialReactTable table={table} /></Box>;
 };
 
 const queryClient = new QueryClient();
@@ -221,6 +220,3 @@ const MuiTableWithProviders = () => (
 );
 
 export default MuiTableWithProviders;
-
-
-
