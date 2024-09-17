@@ -10,7 +10,6 @@ import { GetTaskByIdQuery } from '@app/domains/task/queries/impl/get-task-by-id.
 import { Logger } from '@app/core/common/logger/logger.service';
 import { BulkCreateTasksCommand } from '../commands/impl/bulk-create-task.command';
 import { BulkUpdateTasksCommand } from '../commands/impl/bulk-update-task.command';
-import * as fs from 'fs';
 
 @Injectable()
 export class TaskService {
@@ -106,8 +105,8 @@ export class TaskService {
     }
   }
 
-  async bulkCreateTasks(filePath: Buffer, mimetype: string): Promise<any> {
-    const fileBuffer = fs.readFileSync(filePath);
+  async bulkCreateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+  
     // Pass the file buffer and mimetype to the command
     return this.commandBus.execute(new BulkCreateTasksCommand(fileBuffer, mimetype));
   }

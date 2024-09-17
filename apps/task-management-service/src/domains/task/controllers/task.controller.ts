@@ -58,20 +58,20 @@ export class TaskController {
   @Post('bulk-create')
   @ApiOperation({ summary: 'Bulk create tasks via CSV or XLSX file' })
   @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-create-tasks'))) // Use multer config
-  async bulkCreate(@UploadedFile() file: multer.File): Promise<any> {
+  async bulkCreate(@UploadedFile() file: Express.Multer.File): Promise<any> {
     console.log('**** ', file)
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
     // Pass the file buffer and mimetype to the service for processing
-    return this.taskService.bulkCreateTasks(file.path, file.mimetype);
+    return this.taskService.bulkCreateTasks(file.buffer, file.mimetype);
   }
 
   @Post('bulk-update')
   @ApiOperation({ summary: 'Bulk update tasks via CSV or XLSX file' })
   @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-update-tasks'))) // Use multer config
-  async bulkUpdate(@UploadedFile() file: multer.File): Promise<any> {
+  async bulkUpdate(@UploadedFile() file: Express.Multer.File): Promise<any> {
     
     if (!file) {
       throw new BadRequestException('File is required');
@@ -82,42 +82,42 @@ export class TaskController {
   }
     // ---------------- Kafka Handlers ------------------
 
-  // Kafka Event: Create Task
-  @EventPattern('task.create')
-  async handleTaskCreateEvent(@Payload() message: CreateTaskDto): Promise<void> {
-    console.log('Received Kafka event for task.create:', message);
-    await this.taskService.createTask(message);
-  }
+  // // Kafka Event: Create Task
+  // @EventPattern('task.create')
+  // async handleTaskCreateEvent(@Payload() message: CreateTaskDto): Promise<void> {
+  //   console.log('Received Kafka event for task.create:', message);
+  //   await this.taskService.createTask(message);
+  // }
 
-  // Kafka Request-Response: Get All Tasks
-  @MessagePattern('task.getAll')
-  async handleGetAllTasksRequest(): Promise<any> {
-    console.log('Received Kafka request for task.getAll');
-    return this.taskService.getAllTasks(10, 1); // You can adjust pagination as needed
-  }
+  // // Kafka Request-Response: Get All Tasks
+  // @MessagePattern('task.getAll')
+  // async handleGetAllTasksRequest(): Promise<any> {
+  //   console.log('Received Kafka request for task.getAll');
+  //   return this.taskService.getAllTasks(10, 1); // You can adjust pagination as needed
+  // }
 
-  // Kafka Request-Response: Get Task by ID
-  @MessagePattern('task.getById')
-  async handleGetTaskByIdRequest(@Payload() message: any): Promise<any> {
-    console.log('Received Kafka request for task.getById:', message);
-    return this.taskService.getTaskById(message.id);
-  }
+  // // Kafka Request-Response: Get Task by ID
+  // @MessagePattern('task.getById')
+  // async handleGetTaskByIdRequest(@Payload() message: any): Promise<any> {
+  //   console.log('Received Kafka request for task.getById:', message);
+  //   return this.taskService.getTaskById(message.id);
+  // }
 
-  // Kafka Event: Update Task
-  @EventPattern('task.update')
-  async handleTaskUpdateEvent(@Payload() message: any): Promise<void> {
-    console.log('Received Kafka event for task.update:', message);
-    await this.taskService.updateTask(message.id, message);
-  }
+  // // Kafka Event: Update Task
+  // @EventPattern('task.update')
+  // async handleTaskUpdateEvent(@Payload() message: any): Promise<void> {
+  //   console.log('Received Kafka event for task.update:', message);
+  //   await this.taskService.updateTask(message.id, message);
+  // }
 
-  // Kafka Event: Delete Task
-  @EventPattern('task.delete')
-  async handleTaskDeleteEvent(@Payload() message: any): Promise<void> {
-    console.log('Received Kafka event for task.delete:', message);
-    await this.taskService.deleteTask(message.id);
-  }
+  // // Kafka Event: Delete Task
+  // @EventPattern('task.delete')
+  // async handleTaskDeleteEvent(@Payload() message: any): Promise<void> {
+  //   console.log('Received Kafka event for task.delete:', message);
+  //   await this.taskService.deleteTask(message.id);
+  // }
 
-   // Kafka Request-Response: Create Bulk Tasks
+   //Kafka Request-Response: Create Bulk Tasks
    @MessagePattern('batch.task.create')
    async handleBulkCreateTasks(@Payload() message: any, @Ctx() context: KafkaContext): Promise<any> {
      console.log('Received Kafka Message for batch.task.create', message);
