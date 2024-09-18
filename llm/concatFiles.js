@@ -60,4 +60,4 @@ function init(startPaths) {
 }
 
 // Example usage: pass an array of paths
-init(['./../apps/chat-server/src/domains/group']);
+init(['./../apps/task-management-service/src/domains']);
