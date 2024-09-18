@@ -23,4 +23,22 @@ export class RedisService {
   async delete(key: string): Promise<void> {
     await this.redisClient.del(key);
   }
+
+  // Bulk insert using MSET
+  async bulkInsert(keys: { key: string, value: string }[]): Promise<void> {
+    const data = keys.reduce((acc, { key, value }) => {
+      acc.push(key, value);
+      return acc;
+    }, []);
+    await this.redisClient.mset(...data);
+  }
+
+  // Bulk delete
+  async bulkDelete(keys: string[]): Promise<void> {
+    const pipeline = this.redisClient.pipeline();
+    keys.forEach((key) => {
+      pipeline.del(key);
+    });
+    await pipeline.exec();
+  }
 }

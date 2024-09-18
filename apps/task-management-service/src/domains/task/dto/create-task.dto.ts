@@ -1,9 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsDate, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsDate, IsEnum, IsOptional } from 'class-validator';
 
 export class CreateTaskDto {
 
+  @ApiPropertyOptional({ description: 'ID of the task (auto-generated)' })
+  @IsOptional()
+  @IsString() 
   id?: string;
 
   @ApiProperty({ description: 'Title of the task' })

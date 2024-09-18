@@ -78,7 +78,17 @@ services:
     environment:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
     networks:
-      - kafka-network    
+      - kafka-network   
+
+  redis:
+    image: "redis:alpine"
+    container_name: "redis"
+    ports:
+      - "6379:6379"
+    # volumes:
+    #   - redis_data:/data
+    networks:
+      - kafka-network
 
 networks:
   kafka-network:

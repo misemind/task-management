@@ -20,7 +20,9 @@ import Redis from 'ioredis';
 
                 console.log('Redis URL:', redisUrl); // Log to ensure URL is correct
 
-                return new Redis(redisUrl);
+                return new Redis({
+                    host, port
+                });
             },
             inject: [ConfigService],
         },

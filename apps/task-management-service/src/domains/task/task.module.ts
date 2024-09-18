@@ -14,6 +14,7 @@ import { Kafka } from 'kafkajs';
 import { KafkaModule } from '@app/kafka/kafka.module';
 import { JobModule } from '../job/job.module';
 import { SocketModule } from '@app/socket/socket.module';
+import { RedisModule } from '@app/redis/redis.module';
 
 @Module({})
 export class TaskModule {
@@ -26,6 +27,7 @@ export class TaskModule {
         CoreModule,
         KafkaModule,
         SocketModule,
+        RedisModule,
         JobModule,
       ],
       providers: [

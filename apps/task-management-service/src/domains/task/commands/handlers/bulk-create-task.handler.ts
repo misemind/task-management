@@ -9,6 +9,7 @@ import { Connection, ClientSession } from 'mongoose';
 import { CreateTaskDto } from '../../dto/create-task.dto';
 import { JobService } from '@app/domains/job/services/job.service';
 import { SocketGateway } from '@app/socket/socket.gateway';
+import { RedisService } from '@app/redis/redis.service';
 
 @CommandHandler(BulkCreateTasksCommand)
 export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCommand> {
@@ -18,7 +19,8 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     private readonly taskRepository: TaskRepository,
     private readonly connection: Connection,
     private readonly jobService: JobService,
-    private readonly socketGateway: SocketGateway
+    private readonly socketGateway: SocketGateway,
+    private readonly redisService: RedisService
   ) { }
 
   async bulkInsertWithRetryAndLogging(tasks: CreateTaskDto[]): Promise<any> {
@@ -31,6 +33,7 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     // Prepare bulk operations for MongoDB's bulkWrite method
     const bulkOperations = tasks.map(task => {
       if (task.id) {
+        
         // If there's an id, we perform an upsert (update if exists, insert if not)
         return {
           updateOne: {
@@ -78,11 +81,26 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     }
   }
 
+  async bulkInsertInRedis(tasks: CreateTaskDto[], result: any): Promise<any> {
+    const bulkKeys = tasks.map((task, index) => {
+      const taskId = task.id || result.insertedIds?.[index]?._id;  // Use task.id or the insertedId from result
+      return {
+        key: taskId,
+        value: JSON.stringify(task)
+      };
+    });
+
+    // Insert in Redis
+    await this.redisService.bulkInsert(bulkKeys);
+  }
+
 
   async execute(command: BulkCreateTasksCommand): Promise<void> {
     const { tasks, jobId, batchNumber } = command;
     try {
-      const inserted = await this.bulkInsertWithRetryAndLogging(tasks);
+      const clonedTasks = JSON.parse(JSON.stringify(tasks));
+      const inserted = await this.bulkInsertWithRetryAndLogging(clonedTasks);
+      await this.bulkInsertInRedis(clonedTasks, inserted);
       if (inserted) {
         const job = await this.jobService.getJobById(jobId);
         let updateStatus = {};
@@ -91,7 +109,7 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
             status: 'COMPLETED',
           }
         }
-        
+
         // update job:
         await this.jobService.updateJob(job._id, {
           completedTasks: job.completedTasks + tasks.length,
@@ -100,10 +118,10 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
           ...updateStatus
         });
 
-       
+
         this.socketGateway.emitJobUpdated(job);
-        
-        
+
+
       }
       // emit socket when Job Updated
       return inserted;
