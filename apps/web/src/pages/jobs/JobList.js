@@ -45,7 +45,7 @@ const JobList = () => {
 
   const handleDeleteConfirm = () => {
     if (selectedJob) {
-      dispatch(deleteJob(selectedJob.jobId)); // Trigger the deleteJob thunk
+      dispatch(deleteJob(selectedJob._id)); // Trigger the deleteJob thunk
     }
     setDeleteConfirmOpen(false);
   };
@@ -73,7 +73,7 @@ const JobList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {jobs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((job) => (
+              {jobs?.map((job) => (
                 <TableRow key={job.jobId}>
                   <TableCell>{job.jobId}</TableCell>
                   <TableCell>{job.totalTasks}</TableCell>

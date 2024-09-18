@@ -4,8 +4,8 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async () => {
-  const response = await axios.get(`${API_BASE_URL}/api/tasks`);
+export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async ({ page = 1, limit = 5 } = {}) => {
+  const response = await axios.get(`${API_BASE_URL}/api/tasks?limit=${limit}&page=${page}`);
   return { data: response.data.data, totalCount: response.data.total };
 });
 
