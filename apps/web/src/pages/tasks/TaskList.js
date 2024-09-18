@@ -35,7 +35,6 @@ const TaskList = () => {
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
   useEffect(() => {
     dispatch(fetchTasks({ page: page + 1, limit: rowsPerPage }));
   }, [dispatch, page, rowsPerPage]);
@@ -93,16 +92,16 @@ const TaskList = () => {
 
     // Dispatch the file upload action to the API
     dispatch(uploadTasksFile(formData))
-    .then(() => {
-      alert('File uploaded successfully!');
+      .then(() => {
+        alert('File uploaded successfully!');
 
-      // After successful file upload, refetch the tasks to update the list
-      dispatch(fetchTasks()); // This will refetch the task list
-    })
-    .catch((error) => {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file.');
-    });
+        // After successful file upload, refetch the tasks to update the list
+        dispatch(fetchTasks()); // This will refetch the task list
+      })
+      .catch((error) => {
+        console.error('Error uploading file:', error);
+        alert('Error uploading file.');
+      });
   };
 
   // Handle exporting tasks to CSV/XLSX
@@ -188,7 +187,7 @@ const TaskList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {tasks && tasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((task, index) => (
+              {tasks && tasks?.map((task, index) => (
                 <TableRow key={task._id}
                   sx={{
                     backgroundColor: index % 2 === 0 ? 'white' : '#f5f5f5', // Alternate row color
@@ -202,7 +201,7 @@ const TaskList = () => {
                     <IconButton color="primary" onClick={() => handleEdit(task)}>
                       <Edit />
                     </IconButton>
-                    <IconButton color="secondary" onClick={() => handleDelete(task)}>
+                    <IconButton color="secondary" data-testid={`delete-task-${task._id}`} onClick={() => handleDelete(task)}>
                       <Delete />
                     </IconButton>
                   </TableCell>
