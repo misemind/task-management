@@ -5,13 +5,15 @@ import { Logger } from '@app/core/common/logger/logger.service';
 import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
 import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
 import { JobService } from '@app/domains/job/services/job.service';
+import { SocketGateway } from '@app/socket/socket.gateway';
 
 @CommandHandler(ProcessTasksUplaodedFileCommand)
 export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessTasksUplaodedFileCommand> {
   constructor(
     private readonly eventBus: EventBus,
     private readonly logger: Logger,
-    private readonly jobService: JobService, // Inject JobService
+    private readonly jobService: JobService,
+    private readonly socketGateway: SocketGateway // Inject JobService
   ) { }
 
   async execute(command: ProcessTasksUplaodedFileCommand): Promise<void> {
@@ -55,11 +57,15 @@ export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessT
     const job = await this.jobService.createJob(createJobDto); // Create the Job entity
     this.logger.log(`Job created with ID: ${job.jobId}`);
 
+    // emit socket when Job Created
+    this.socketGateway.emitJobCreated(job);
+
     // Emit an event for each batch
     batches.forEach((batch, index) => {
       this.logger.log(`Emitting TasksBatchedEvent for batch ${index + 1}`);
       this.eventBus.publish(new TasksBatchedEvent(batch, index + 1, job._id));
     });
+
 
     this.logger.log(`Successfully processed ${tasks.length} tasks in ${batches.length} batches.`);
   }

@@ -128,7 +128,7 @@ export class TaskService {
       const createTaskDTO = await this.createTaskDTO(batchTasks[i]);
       taskDtos.push(createTaskDTO);
     }
-    return this.commandBus.execute(new BulkCreateTasksCommand(taskDtos, jobId, batchNumber));
+    return await this.commandBus.execute(new BulkCreateTasksCommand(taskDtos, jobId, batchNumber));
   }
 
   async createTaskDTO(taskData: any): Promise<CreateTaskDto> {

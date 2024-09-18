@@ -15,9 +15,12 @@ const jobSlice = createSlice({
       state.totalCount += 1;
     },
     jobUpdated: (state, action) => {
-      const index = state.items.findIndex((job) => job._id === action.payload._id);
+      const index = state.items.findIndex((job) => { 
+        return job._id === action.payload._id});
       if (index !== -1) {
         state.items[index] = action.payload;  // Update the job
+      } else {
+        state.items.push(action.payload); // insert the job
       }
     },
     jobDeleted: (state, action) => {

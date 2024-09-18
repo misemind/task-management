@@ -13,6 +13,7 @@ import { TaskEventHandlers } from './events';
 import { Kafka } from 'kafkajs';
 import { KafkaModule } from '@app/kafka/kafka.module';
 import { JobModule } from '../job/job.module';
+import { SocketModule } from '@app/socket/socket.module';
 
 @Module({})
 export class TaskModule {
@@ -24,6 +25,7 @@ export class TaskModule {
         CqrsModule,
         CoreModule,
         KafkaModule,
+        SocketModule,
         JobModule,
       ],
       providers: [

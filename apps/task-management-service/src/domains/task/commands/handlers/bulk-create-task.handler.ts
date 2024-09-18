@@ -8,6 +8,7 @@ import { InternalServerErrorException } from '@nestjs/common';
 import { Connection, ClientSession } from 'mongoose';
 import { CreateTaskDto } from '../../dto/create-task.dto';
 import { JobService } from '@app/domains/job/services/job.service';
+import { SocketGateway } from '@app/socket/socket.gateway';
 
 @CommandHandler(BulkCreateTasksCommand)
 export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCommand> {
@@ -17,6 +18,7 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     private readonly taskRepository: TaskRepository,
     private readonly connection: Connection,
     private readonly jobService: JobService,
+    private readonly socketGateway: SocketGateway
   ) { }
 
   async bulkInsertWithRetryAndLogging(tasks: CreateTaskDto[]): Promise<any> {
@@ -89,14 +91,21 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
             status: 'COMPLETED',
           }
         }
+        
         // update job:
         await this.jobService.updateJob(job._id, {
-          completedTasks: tasks.length,
-          completedBatches: batchNumber,
+          completedTasks: job.completedTasks + tasks.length,
+          completedBatches: job.completedBatches + 1,
           completedAt: new Date(),
           ...updateStatus
         });
+
+       
+        this.socketGateway.emitJobUpdated(job);
+        
+        
       }
+      // emit socket when Job Updated
       return inserted;
 
     } catch (error) {
