@@ -1,0 +1,1808 @@
+// ../apps/task-management-service/src/domains/job/commands/handlers/create-job.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { JobRepository } from '@app/domains/job/repositories/job.repository';
+
+import { CreateJobCommand } from '@app/domains/job/commands/impl/create-job.command';
+import { Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { Job } from '../../entities/job.entity';
+
+@CommandHandler(CreateJobCommand)
+@Injectable()
+export class CreateJobHandler implements ICommandHandler<CreateJobCommand> {
+  constructor(
+    private readonly jobRepository: JobRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: CreateJobCommand): Promise<Job> {
+    const { createJobDto } = command;
+    this.logger.log(`Creating a new job with data: ${JSON.stringify(createJobDto)}`);
+
+    const createdJob = await this.jobRepository.create(createJobDto);
+
+    this.logger.log(`Job created successfully with ID: ${createdJob.jobId}`);
+
+    return createdJob;
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/commands/handlers/delete-job.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { JobRepository } from '@app/domains/job/repositories/job.repository';
+import { DeleteJobCommand } from '@app/domains/job/commands/impl/delete-job.command';
+
+import { NotFoundException, Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { Job } from '../../entities/job.entity';
+
+@CommandHandler(DeleteJobCommand)
+@Injectable()
+export class DeleteJobHandler implements ICommandHandler<DeleteJobCommand> {
+  constructor(
+    private readonly jobRepository: JobRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: DeleteJobCommand): Promise<Job | null> {
+    this.logger.log(`Deleting job with ID: ${command.jobId}`);
+
+    const existingJob = await this.jobRepository.findById(command.jobId);
+
+    if (!existingJob) {
+      this.logger.warn(`Job not found with ID: ${command.jobId}`);
+      throw new NotFoundException('Job not found');
+    }
+
+    const deletedJob = await this.jobRepository.delete(command.jobId);
+    this.logger.log(`Job deleted successfully with ID: ${command.jobId}`);
+
+    return deletedJob;
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/commands/handlers/update-job.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { JobRepository } from '@app/domains/job/repositories/job.repository';
+import { UpdateJobCommand } from '@app/domains/job/commands/impl/update-job.command';
+
+import { NotFoundException, Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { Job } from '../../entities/job.entity';
+
+@CommandHandler(UpdateJobCommand)
+@Injectable()
+export class UpdateJobHandler implements ICommandHandler<UpdateJobCommand> {
+  constructor(
+    private readonly jobRepository: JobRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: UpdateJobCommand): Promise<Job | null> {
+    this.logger.log(`Updating job with ID: ${command.jobId}`);
+
+    const existingJob = await this.jobRepository.findById(command.jobId);
+
+    if (!existingJob) {
+      this.logger.warn(`Job not found with ID: ${command.jobId}`);
+      throw new NotFoundException('Job not found');
+    }
+
+    const updatedJob = await this.jobRepository.update(existingJob.jobId, command.updateJobDto);
+    this.logger.log(`Job updated successfully with ID: ${existingJob.jobId}`);
+
+    return updatedJob;
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/commands/impl/create-job.command.ts
+import { ICommand } from '@nestjs/cqrs';
+import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
+
+export class CreateJobCommand implements ICommand {
+  constructor(public readonly createJobDto: CreateJobDto) {}
+}
+
+// ../apps/task-management-service/src/domains/job/commands/impl/delete-job.command.ts
+import { ICommand } from '@nestjs/cqrs';
+
+export class DeleteJobCommand implements ICommand {
+  constructor(public readonly jobId: string) {}
+}
+
+// ../apps/task-management-service/src/domains/job/commands/impl/update-job.command.ts
+import { ICommand } from '@nestjs/cqrs';
+import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
+
+export class UpdateJobCommand implements ICommand {
+  constructor(public readonly jobId: string, public readonly updateJobDto: UpdateJobDto) {}
+}
+
+// ../apps/task-management-service/src/domains/job/commands/index.ts
+import { CreateJobHandler } from './handlers/create-job.handler';
+import { UpdateJobHandler } from './handlers/update-job.handler';
+import { DeleteJobHandler } from './handlers/delete-job.handler';
+
+export const JobCommandHandlers = [
+  CreateJobHandler,
+  UpdateJobHandler,
+  DeleteJobHandler,
+];
+
+// ../apps/task-management-service/src/domains/job/controllers/job.controller.ts
+import { Controller, Get, Post, Body, Put, Param, Delete, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
+import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
+import { JobService } from '@app/domains/job/services/job.service';
+
+@ApiTags('Job')
+@Controller('api/jobs')
+export class JobController {
+  constructor(private readonly jobService: JobService) { }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new job' })
+  @ApiResponse({ status: 201, description: 'The job has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  create(@Body() createJobDto: CreateJobDto) {
+    return this.jobService.createJob(createJobDto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a job by ID' })
+  @ApiResponse({ status: 200, description: 'Return the job.' })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  findOne(@Param('id') id: string) {
+    return this.jobService.getJobById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update a job by ID' })
+  @ApiResponse({ status: 200, description: 'The job has been successfully updated.' })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  update(@Param('id') id: string, @Body() updateJobDto: UpdateJobDto) {
+    return this.jobService.updateJob(id, updateJobDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a job by ID' })
+  @ApiResponse({ status: 200, description: 'The job has been successfully deleted.' })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  remove(@Param('id') id: string) {
+    return this.jobService.deleteJob(id);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all jobs with pagination' })
+  @ApiResponse({ status: 200, description: 'Return all jobs with pagination.' })
+  findAll(@Query('limit') limit: number = 10, @Query('page') page: number = 1) {
+    return this.jobService.getAllJobs(limit, page);
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/dto/create-job.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNumber, IsDate, IsArray, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CreateJobDto {
+  @ApiProperty({ description: 'Unique job ID' })
+  @IsString()
+  jobId: string;
+
+  @ApiProperty({ description: 'Total number of tasks to process' })
+  @IsNumber()
+  totalTasks: number;
+
+  @ApiProperty({ description: 'Total number of batches' })
+  @IsNumber()
+  totalBatches: number;
+
+  @ApiProperty({ description: 'Total number of successfully completed tasks' })
+  @IsNumber()
+  completedTasks: number;
+
+  @ApiProperty({ description: 'Total number of failed tasks' })
+  @IsNumber()
+  failedTasks: number;
+
+  @ApiProperty({ description: 'Number of batches successfully processed' })
+  @IsNumber()
+  completedBatches: number;
+
+  @ApiProperty({ description: 'Number of batches that failed' })
+  @IsNumber()
+  failedBatches: number;
+
+  @ApiProperty({ description: 'Job status (IN_PROGRESS, COMPLETED, FAILED)' })
+  @IsString()
+  status: string;
+
+  @ApiProperty({ description: 'Date when the job was created', type: Date })
+  @Type(() => Date)
+  @IsDate()
+  @IsOptional()
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Date when the job was completed', type: Date, required: false })
+  @Type(() => Date)
+  @IsOptional()
+  completedAt?: Date;
+
+  @ApiProperty({ description: 'Errors encountered during batch processing', type: Array, required: false })
+  @IsArray()
+  @IsOptional()
+  batchErrors: { batchNumber: number; error: string; timestamp: Date }[];
+}
+
+// ../apps/task-management-service/src/domains/job/dto/update-job.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateJobDto } from './create-job.dto';
+
+export class UpdateJobDto extends PartialType(CreateJobDto) {}
+
+// ../apps/task-management-service/src/domains/job/entities/job.entity.ts
+// ../apps/task-management-service/src/domains/job/entities/job.entity.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type JobDocument = Job & Document;
+
+@Schema()
+export class Job {
+  @Prop({ required: true })
+  jobId: string;
+
+  @Prop({ required: true })
+  totalTasks: number; // Total number of tasks to process
+
+  @Prop({ required: true })
+  totalBatches: number; // Total number of batches
+
+  @Prop({ required: true })
+  completedTasks: number; // Total number of successfully completed tasks
+
+  @Prop({ required: true })
+  failedTasks: number; // Total number of failed tasks
+
+  @Prop({ required: true })
+  completedBatches: number; // Number of batches successfully processed
+
+  @Prop({ required: true })
+  failedBatches: number; // Number of batches that failed
+
+  @Prop({ required: true })
+  status: string; // IN_PROGRESS, COMPLETED, FAILED
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop()
+  completedAt: Date; // The time when the job was completed
+
+  @Prop({ type: [{ batchNumber: Number, error: String, timestamp: Date }], default: [] })
+  batchErrors: { batchNumber: number; error: string; timestamp: Date }[]; // To store batch-specific errors
+}
+
+export const JobSchema = SchemaFactory.createForClass(Job);
+
+
+// ../apps/task-management-service/src/domains/job/job.module.ts
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { CqrsModule } from '@nestjs/cqrs';
+import { JobController } from './controllers/job.controller';
+import { JobService } from './services/job.service';
+import { JobRepository } from './repositories/job.repository';
+import { JobCommandHandlers } from './commands';
+import { Job, JobSchema } from './entities/job.entity';
+import { CoreModule } from '@app/core/core.module';
+import { JobQueryHandlers } from './queries';
+
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Job.name, schema: JobSchema }]),
+    CqrsModule,
+    CoreModule,
+  ],
+  controllers: [JobController],
+  providers: [
+    JobService,
+    JobRepository,
+    ...JobCommandHandlers,
+    ...JobQueryHandlers
+  ],
+  exports: [JobService, JobRepository],
+})
+export class JobModule {}
+
+// ../apps/task-management-service/src/domains/job/queries/handlers/get-all-jobs.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { JobRepository } from '@app/domains/job/repositories/job.repository';
+import { Job } from '@app/domains/job/entities/job.entity';
+import { GetAllJobsQuery } from '@app/domains/job/queries/impl/get-all-jobs.query';
+
+@QueryHandler(GetAllJobsQuery)
+export class GetAllJobsHandler implements IQueryHandler<GetAllJobsQuery> {
+  constructor(private readonly jobRepository: JobRepository) {}
+
+  async execute(query: GetAllJobsQuery): Promise<{ data: Job[]; total: number }> {
+    const { limit, page } = query;
+    const skip = (page - 1) * limit;
+    const jobs = await this.jobRepository.findAll(limit, skip);
+    const total = await this.jobRepository.countAll();
+    return {
+      data: jobs,
+      total,
+    };
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/queries/handlers/get-job-by-id.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { JobRepository } from '@app/domains/job/repositories/job.repository';
+import { GetJobByIdQuery } from '@app/domains/job/queries/impl/get-job-by-id.query';
+import { Job } from '@app/domains/job/entities/job.entity';
+
+@QueryHandler(GetJobByIdQuery)
+export class GetJobByIdHandler implements IQueryHandler<GetJobByIdQuery> {
+  constructor(private readonly jobRepository: JobRepository) {}
+
+  async execute(query: GetJobByIdQuery): Promise<Job | null> {
+    return this.jobRepository.findById(query.jobId);
+  }
+}
+
+// ../apps/task-management-service/src/domains/job/queries/impl/get-all-jobs.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetAllJobsQuery implements IQuery {
+  constructor(public readonly limit: number, public readonly page: number) {}
+}
+
+// ../apps/task-management-service/src/domains/job/queries/impl/get-job-by-id.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetJobByIdQuery implements IQuery {
+  constructor(public readonly jobId: string) {}
+}
+
+// ../apps/task-management-service/src/domains/job/queries/index.ts
+import { GetJobByIdHandler } from './handlers/get-job-by-id.handler';
+import { GetAllJobsHandler } from './handlers/get-all-jobs.handler';
+
+export const JobQueryHandlers = [
+  GetJobByIdHandler,
+  GetAllJobsHandler,
+];
+
+// ../apps/task-management-service/src/domains/job/repositories/job.repository.ts
+// ../apps/task-management-service/src/domains/job/repositories/job.repository.ts
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { ClientSession, Model } from 'mongoose';
+import { Job, JobDocument } from '@app/domains/job/entities/job.entity';
+import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
+import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
+
+@Injectable()
+export class JobRepository {
+  constructor(@InjectModel(Job.name) private readonly jobModel: Model<JobDocument>) {}
+
+  async create(createJobDto: CreateJobDto): Promise<Job> {
+    const newJob = new this.jobModel(createJobDto);
+    return newJob.save();
+  }
+
+  async findById(id: string): Promise<Job | null> {
+    return this.jobModel.findById(id).exec();
+  }
+
+  async findAll(limit: number, skip: number): Promise<Job[]> {
+    return this.jobModel.find().skip(skip).limit(limit).exec();
+  }
+
+  async update(id: string, updateJobDto: UpdateJobDto): Promise<Job | null> {
+    return this.jobModel.findOneAndUpdate({ jobId: id }, updateJobDto, { new: true }).exec();
+  }
+
+  async delete(id: string): Promise<Job | null> {
+    return this.jobModel.findByIdAndDelete(id).exec();
+  }
+
+  async countAll(): Promise<number> {
+    return this.jobModel.countDocuments();
+  }
+
+  async insertMany(createJobDtos: CreateJobDto[], options: { session: ClientSession }): Promise<Job[]> {
+    try {
+      return await this.jobModel.insertMany(createJobDtos, options);
+    } catch (error) {
+      throw new Error('Failed to insert jobs in bulk: ' + error.message);
+    }
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/job/services/job.service.ts
+// ../apps/task-management-service/src/domains/job/services/job.service.ts
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateJobCommand } from '@app/domains/job/commands/impl/create-job.command';
+import { DeleteJobCommand } from '@app/domains/job/commands/impl/delete-job.command';
+import { UpdateJobCommand } from '@app/domains/job/commands/impl/update-job.command';
+import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
+import { UpdateJobDto } from '@app/domains/job/dto/update-job.dto';
+
+import { Logger } from '@app/core/common/logger/logger.service';
+import { GetJobByIdQuery } from '../queries/impl/get-job-by-id.query';
+import { GetAllJobsQuery } from '../queries/impl/get-all-jobs.query';
+
+@Injectable()
+export class JobService {
+  constructor(
+    private commandBus: CommandBus,
+    private queryBus: QueryBus,
+    private readonly logger: Logger,
+  ) {}
+
+  async createJob(createJobDto: CreateJobDto) {
+    try {
+      this.logger.log(`Creating job with data: ${JSON.stringify(createJobDto)}`);
+      const job = await this.commandBus.execute(new CreateJobCommand(createJobDto));
+      this.logger.log(`Job created with ID: ${job.jobId}`);
+      return job;
+    } catch (error) {
+      this.logger.error('Failed to create job', error.stack);
+      throw new InternalServerErrorException('Failed to create job', error);
+    }
+  }
+
+  async updateJob(id: string, updateJobDto: UpdateJobDto) {
+    try {
+      this.logger.log(`Updating job with ID: ${id} and data: ${JSON.stringify(updateJobDto)}`);
+      const job = await this.commandBus.execute(new UpdateJobCommand(id, updateJobDto));
+      if (!job) {
+        this.logger.warn(`Job not found with ID: ${id}`);
+        throw new NotFoundException('Job not found');
+      }
+      this.logger.log(`Job updated successfully with ID: ${id}`);
+      return job;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to update job: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to update job', error.stack);
+      throw new InternalServerErrorException('Failed to update job', error);
+    }
+  }
+
+  async deleteJob(id: string) {
+    try {
+      this.logger.log(`Deleting job with ID: ${id}`);
+      const job = await this.commandBus.execute(new DeleteJobCommand(id));
+      if (!job) {
+        this.logger.warn(`Job not found with ID: ${id}`);
+        throw new NotFoundException('Job not found');
+      }
+      this.logger.log(`Job deleted successfully with ID: ${id}`);
+      return job;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to delete job: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to delete job', error.stack);
+      throw new InternalServerErrorException('Failed to delete job', error);
+    }
+  }
+  async getAllJobs(limit = 10, page = 1) {
+    try {
+      this.logger.log(`Retrieving all jobs with limit: ${limit}, page: ${page}`);
+
+      const { data, total } = await this.queryBus.execute(new GetAllJobsQuery(limit, page));
+
+      this.logger.log(`Retrieved ${data.length} jobs with total count: ${total}`);
+
+      return { data, total };
+    } catch (error) {
+      this.logger.error('Failed to retrieve jobs', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve jobs', error);
+    }
+  }
+
+  async getJobById(id: string) {
+    try {
+      this.logger.log(`Retrieving job with ID: ${id}`);
+      const job = await this.queryBus.execute(new GetJobByIdQuery(id));
+      if (!job) {
+        this.logger.warn(`Job not found with ID: ${id}`);
+        throw new NotFoundException('Job not found');
+      }
+      this.logger.log(`Job retrieved with ID: ${id}`);
+      return job;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to retrieve job: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to retrieve job', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve job', error);
+    }
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/shared/dto/pagination.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class PaginationDto {
+
+  @ApiProperty({ description: 'Number of items per page', example: 10, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  readonly limit: number = 10;
+
+  @ApiProperty({ description: 'Page number', example: 1, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  readonly page: number = 1;
+}
+
+
+
+
+// ../apps/task-management-service/src/domains/shared/utils/excel.util.ts
+// ../apps/task-management-service/src/domains/shared/utils/excel.util.ts
+import * as xlsx from 'xlsx';
+import { BadRequestException } from '@nestjs/common';
+
+// Utility function to parse CSV file buffer into JSON
+export const parseCsvToJson = (buffer: Buffer): any[] => {
+  try {
+    if (!buffer || buffer.length === 0) {
+      throw new BadRequestException('Buffer is empty or not valid');
+    }
+
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    if (!sheet || !sheet['!ref'] || sheet['!ref'] === 'A1') {
+      throw new BadRequestException('The CSV file does not contain valid data');
+    }
+
+    // Convert sheet to JSON format
+    const jsonData: any[] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+
+    if (!jsonData || jsonData.length === 0) {
+      throw new BadRequestException('The CSV file does not contain any valid data');
+    }
+
+    return jsonData;
+  } catch (error) {
+    throw new BadRequestException(`Failed to parse CSV file: ${error.message}`);
+  }
+};
+
+// Utility function to parse XLSX file buffer into JSON
+export const parseXlsxToJson = (buffer: Buffer): any[] => {
+  try {
+    if (!buffer || buffer.length === 0) {
+      throw new BadRequestException('Buffer is empty or not valid');
+    }
+
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    if (!sheet || !sheet['!ref'] || sheet['!ref'] === 'A1') {
+      throw new BadRequestException('The XLSX file does not contain valid data');
+    }
+
+    // Convert sheet to JSON format
+    const jsonData: any[] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+
+    if (!jsonData || jsonData.length === 0) {
+      throw new BadRequestException('The XLSX file does not contain any valid data');
+    }
+
+    return jsonData;
+  } catch (error) {
+    throw new BadRequestException(`Failed to parse XLSX file: ${error.message}`);
+  }
+};
+
+
+// ../apps/task-management-service/src/domains/task/commands/handlers/bulk-create-task.handler.ts
+import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { BulkCreateTasksCommand } from '../impl/bulk-create-task.command';
+import { TasksBatchedEvent } from '../../events/impl/tasks-batched.event';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
+
+@CommandHandler(BulkCreateTasksCommand)
+export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCommand> {
+  constructor(
+    private readonly eventBus: EventBus,
+    private readonly logger: Logger
+  ) {}
+
+  async execute(command: BulkCreateTasksCommand): Promise<void> {
+    const { fileBuffer, mimetype } = command;
+
+    // Convert the file to tasks JSON based on mimetype
+    let tasks: any[];
+    if (mimetype === 'text/csv') {
+      tasks = parseCsvToJson(fileBuffer);
+      this.logger.log('File parsed as CSV');
+    } else if (mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      tasks = parseXlsxToJson(fileBuffer);
+      this.logger.log('File parsed as XLSX');
+    } else {
+      this.logger.error('Unsupported file type');
+      throw new Error('Unsupported file type');
+    }
+
+    // Process tasks in batches of 100
+    const batchSize = 100;
+    const batches = [];
+
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      batches.push(batch);
+    }
+
+    // Emit an event for each batch
+    batches.forEach((batch, index) => {
+      this.logger.log(`Emitting TasksBatchedEvent for batch ${index + 1}`);
+      this.eventBus.publish(new TasksBatchedEvent(batch, index + 1));
+    });
+
+    this.logger.log(`Successfully processed ${tasks.length} tasks in ${batches.length} batches.`);
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/task/commands/handlers/bulk-update-task.handler.ts
+import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { BulkUpdateTasksCommand } from '../impl/bulk-update-task.command';
+import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
+
+@CommandHandler(BulkUpdateTasksCommand)
+export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCommand> {
+  constructor(
+    private readonly eventBus: EventBus,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: BulkUpdateTasksCommand): Promise<void> {
+    const { fileBuffer, mimetype } = command;
+
+    // Convert the file to tasks JSON based on mimetype
+    let tasks: any[];
+    if (mimetype === 'text/csv') {
+      tasks = parseCsvToJson(fileBuffer);
+      this.logger.log('File parsed as CSV');
+    } else if (mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      tasks = parseXlsxToJson(fileBuffer);
+      this.logger.log('File parsed as XLSX');
+    } else {
+      this.logger.error('Unsupported file type');
+      throw new Error('Unsupported file type');
+    }
+
+    // Process tasks in batches of 100
+    const batchSize = 100;
+    const batches = [];
+
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      batches.push(batch);
+    }
+
+    // Emit an event for each batch
+    batches.forEach((batch, index) => {
+      this.logger.log(`Emitting TasksUpdateBatchedEvent for batch ${index + 1}`);
+      this.eventBus.publish(new TasksUpdateBatchedEvent(batch, index + 1));
+    });
+
+    this.logger.log(`Successfully processed ${tasks.length} tasks in ${batches.length} batches.`);
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/task/commands/handlers/create-task.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { Task } from '@app/domains/task/entities/task.entity';
+import { CreateTaskCommand } from '@app/domains/task/commands/impl/create-task.command';
+import { Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+@CommandHandler(CreateTaskCommand)
+@Injectable()
+export class CreateTaskHandler implements ICommandHandler<CreateTaskCommand> {
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: CreateTaskCommand): Promise<Task> {
+    const { createTaskDto } = command;
+    this.logger.log(`Creating a new task with data: ${JSON.stringify(createTaskDto)}`);
+
+    // Create the task in the repository (database)
+    const createdTask = await this.taskRepository.create(createTaskDto);
+
+    this.logger.log(`Task created successfully with ID: ${createdTask._id}`);
+
+    return createdTask;
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/commands/handlers/delete-task.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { DeleteTaskCommand } from '@app/domains/task/commands/impl/delete-task.command';
+import { Task } from '@app/domains/task/entities/task.entity';
+import { NotFoundException, Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+@CommandHandler(DeleteTaskCommand)
+@Injectable()
+export class DeleteTaskHandler implements ICommandHandler<DeleteTaskCommand> {
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: DeleteTaskCommand): Promise<Task | null> {
+    this.logger.log(`Deleting task with ID: ${command.id}`);
+
+    const existingTask = await this.taskRepository.findById(command.id);
+
+    if (!existingTask) {
+      this.logger.warn(`Task not found with ID: ${command.id}`);
+      throw new NotFoundException('Task not found');
+    }
+
+    const deletedTask = await this.taskRepository.delete(command.id);
+    this.logger.log(`Task deleted successfully with ID: ${command.id}`);
+
+    return deletedTask;
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/commands/handlers/update-task.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { UpdateTaskCommand } from '@app/domains/task/commands/impl/update-task.command';
+import { Task } from '@app/domains/task/entities/task.entity';
+import { NotFoundException, Injectable } from '@nestjs/common';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+@CommandHandler(UpdateTaskCommand)
+@Injectable()
+export class UpdateTaskHandler implements ICommandHandler<UpdateTaskCommand> {
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly logger: Logger,
+  ) {}
+
+  async execute(command: UpdateTaskCommand): Promise<Task | null> {
+    this.logger.log(`Updating task with ID: ${command.id}`);
+
+    const existingTask = await this.taskRepository.findById(command.id);
+
+    if (!existingTask) {
+      this.logger.warn(`Task not found with ID: ${command.id}`);
+      throw new NotFoundException('Task not found');
+    }
+
+    const updatedTask = await this.taskRepository.update(existingTask._id, command.updateTaskDto);
+    this.logger.log(`Task updated successfully with ID: ${existingTask._id}`);
+
+    return updatedTask;
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/commands/impl/bulk-create-task.command.ts
+// ../apps/task-management-service/src/domains/task/commands/impl/bulk-create-task.command.ts
+import { ICommand } from '@nestjs/cqrs';
+
+export class BulkCreateTasksCommand implements ICommand {
+  constructor(public readonly fileBuffer: Buffer, public readonly mimetype: string) {}
+}
+
+
+
+// ../apps/task-management-service/src/domains/task/commands/impl/bulk-update-task.command.ts
+// ../apps/task-management-service/src/domains/task/commands/impl/bulk-update-task.command.ts
+import { ICommand } from '@nestjs/cqrs';
+
+export class BulkUpdateTasksCommand implements ICommand {
+  constructor(public readonly fileBuffer: Buffer, public readonly mimetype: string) {}
+}
+
+// ../apps/task-management-service/src/domains/task/commands/impl/create-task.command.ts
+import { ICommand } from '@nestjs/cqrs';
+import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
+
+export class CreateTaskCommand implements ICommand {
+  constructor(public readonly createTaskDto: CreateTaskDto) {}
+}
+
+// ../apps/task-management-service/src/domains/task/commands/impl/delete-task.command.ts
+import { ICommand } from '@nestjs/cqrs';
+
+export class DeleteTaskCommand implements ICommand {
+  constructor(public readonly id: string) {}
+}
+
+// ../apps/task-management-service/src/domains/task/commands/impl/update-task.command.ts
+import { ICommand } from '@nestjs/cqrs';
+import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
+
+export class UpdateTaskCommand implements ICommand {
+  constructor(public readonly id: string, public readonly updateTaskDto: UpdateTaskDto) {}
+}
+
+// ../apps/task-management-service/src/domains/task/commands/index.ts
+
+import { BulkCreateTasksHandler } from './handlers/bulk-create-task.handler';
+import { BulkUpdateTasksHandler } from './handlers/bulk-update-task.handler';
+import { CreateTaskHandler } from './handlers/create-task.handler';
+import { DeleteTaskHandler } from './handlers/delete-task.handler';
+import { UpdateTaskHandler } from './handlers/update-task.handler';
+
+export const TaskCommandHandlers = [
+  CreateTaskHandler,
+  DeleteTaskHandler,
+  UpdateTaskHandler,
+  BulkCreateTasksHandler,
+  BulkUpdateTasksHandler
+];
+
+// ../apps/task-management-service/src/domains/task/controllers/task.controller.ts
+import { Controller, Get, Post, Body, Put, Param, Delete, Query, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
+import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
+import { TaskService } from '@app/domains/task/services/task.service';
+import { PaginationDto } from '@app/domains/shared/dto/pagination.dto';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { BulkTaskDto } from '../dto/bulk-task.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { MulterConfig } from '@app/config/multerConfig';
+
+@ApiTags('Task')
+@Controller('api/tasks')
+export class TaskController {
+  constructor(private readonly taskService: TaskService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new task' })
+  @ApiResponse({ status: 201, description: 'The task has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  create(@Body() createTaskDto: CreateTaskDto) {
+    return this.taskService.createTask(createTaskDto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all tasks' })
+  @ApiResponse({ status: 200, description: 'Return all tasks.' })
+  findAll(@Query() paginationDto: PaginationDto) {
+    const { limit, page } = paginationDto;
+    return this.taskService.getAllTasks(limit, page);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a task by ID' })
+  @ApiResponse({ status: 200, description: 'Return the task.' })
+  @ApiResponse({ status: 404, description: 'Task not found.' })
+  findOne(@Param('id') id: string) {
+    return this.taskService.getTaskById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update a task by ID' })
+  @ApiResponse({ status: 200, description: 'The task has been successfully updated.' })
+  @ApiResponse({ status: 404, description: 'Task not found.' })
+  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
+    return this.taskService.updateTask(id, updateTaskDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a task by ID' })
+  @ApiResponse({ status: 200, description: 'The task has been successfully deleted.' })
+  @ApiResponse({ status: 404, description: 'Task not found.' })
+  remove(@Param('id') id: string) {
+    return this.taskService.deleteTask(id);
+  }
+
+  @Post('bulk-create')
+  @ApiOperation({ summary: 'Bulk create tasks via CSV or XLSX file' })
+  @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-create-tasks'))) // Use multer config
+  async bulkCreate(@UploadedFile() file: Express.Multer.File): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    // Pass the file buffer and mimetype to the service for processing
+    return this.taskService.bulkCreateTasks(file.buffer, file.mimetype);
+  }
+
+  @Post('bulk-update')
+  @ApiOperation({ summary: 'Bulk update tasks via CSV or XLSX file' })
+  @UseInterceptors(FileInterceptor('file', MulterConfig('bulk-update-tasks'))) // Use multer config
+  async bulkUpdate(@UploadedFile() file: Express.Multer.File): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    // Pass the file buffer and mimetype to the service for processing
+    return this.taskService.bulkUpdateTasks(file.buffer, file.mimetype);
+  }
+    // ---------------- Kafka Handlers ------------------
+
+  // Kafka Event: Create Task
+  @EventPattern('task.create')
+  async handleTaskCreateEvent(@Payload() message: CreateTaskDto): Promise<void> {
+    console.log('Received Kafka event for task.create:', message);
+    await this.taskService.createTask(message);
+  }
+
+  // Kafka Request-Response: Get All Tasks
+  @MessagePattern('task.getAll')
+  async handleGetAllTasksRequest(): Promise<any> {
+    console.log('Received Kafka request for task.getAll');
+    return this.taskService.getAllTasks(10, 1); // You can adjust pagination as needed
+  }
+
+  // Kafka Request-Response: Get Task by ID
+  @MessagePattern('task.getById')
+  async handleGetTaskByIdRequest(@Payload() message: any): Promise<any> {
+    console.log('Received Kafka request for task.getById:', message);
+    return this.taskService.getTaskById(message.id);
+  }
+
+  // Kafka Event: Update Task
+  @EventPattern('task.update')
+  async handleTaskUpdateEvent(@Payload() message: any): Promise<void> {
+    console.log('Received Kafka event for task.update:', message);
+    await this.taskService.updateTask(message.id, message);
+  }
+
+  // Kafka Event: Delete Task
+  @EventPattern('task.delete')
+  async handleTaskDeleteEvent(@Payload() message: any): Promise<void> {
+    console.log('Received Kafka event for task.delete:', message);
+    await this.taskService.deleteTask(message.id);
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/dto/bulk-task.dto.ts
+import { IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateTaskDto } from './create-task.dto';
+
+export class BulkTaskDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateTaskDto)
+  tasks: CreateTaskDto[];
+}
+
+// ../apps/task-management-service/src/domains/task/dto/create-task.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsDate, IsEnum } from 'class-validator';
+
+export class CreateTaskDto {
+  @ApiProperty({ description: 'Title of the task' })
+  @IsString()
+  @IsNotEmpty()
+  readonly title: string;
+
+  @ApiProperty({ description: 'Description of the task' })
+  @IsString()
+  @IsNotEmpty()
+  readonly description: string;
+
+  @ApiProperty({ description: 'Priority of the task', enum: ['Low', 'Medium', 'High'] })
+  @IsEnum(['Low', 'Medium', 'High'])
+  readonly priority: string;
+
+  @ApiProperty({ description: 'Status of the task', enum: ['To Do', 'In Progress', 'Done'] })
+  @IsEnum(['To Do', 'In Progress', 'Done'])
+  readonly status: string;
+
+  @ApiProperty({ description: 'Deadline of the task', type: Date, format:'date-time' })
+  @Type(()=>Date)
+  @IsDate()
+  readonly deadline: Date;
+}
+
+// ../apps/task-management-service/src/domains/task/dto/update-task.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateTaskDto } from './create-task.dto';
+
+export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
+
+// ../apps/task-management-service/src/domains/task/entities/task.entity.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type TaskDocument = Task & Document;
+
+@Schema()
+export class Task {
+  
+  _id?: string;
+
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ required: true, enum: ['Low', 'Medium', 'High'], default: 'Medium' })
+  priority: string;
+
+  @Prop({ required: true, enum: ['To Do', 'In Progress', 'Done'], default: 'To Do' })
+  status: string;
+
+  @Prop({ required: true })
+  deadline: Date;
+}
+
+export const TaskSchema = SchemaFactory.createForClass(Task);
+
+// ../apps/task-management-service/src/domains/task/events/handlers/tasks-batched.handler.ts
+// ../apps/task-management-service/src/domains/task/events/handlers/tasks-batched.handler.ts
+import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { TasksBatchedEvent } from '../impl/tasks-batched.event';
+// Assume a KafkaService exists for Kafka interactions
+
+import { KafkaService } from '@app/kafka/kafka.service';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+@EventsHandler(TasksBatchedEvent)
+export class TasksBatchedEventHandler implements IEventHandler<TasksBatchedEvent> {
+  constructor(private readonly kafkaService: KafkaService, private readonly logger: Logger) {}
+
+  async handle(event: TasksBatchedEvent): Promise<void> {
+    const { tasks, batchNumber } = event;
+    this.logger.log(`Publishing batch ${batchNumber} to Kafka`);
+
+    // Publish the batch to Kafka
+    await this.kafkaService.sendMessage('task-batch-topic', "tasks");
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/task/events/handlers/tasks-update-batched.handler.ts
+// ../apps/task-management-service/src/domains/task/events/handlers/tasks-update-batched.handler.ts
+import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { TasksUpdateBatchedEvent } from '../impl/tasks-update-batched.event';
+
+
+import { KafkaService } from '@app/kafka/kafka.service';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+@EventsHandler(TasksUpdateBatchedEvent)
+export class TasksUpdateBatchedEventHandler implements IEventHandler<TasksUpdateBatchedEvent> {
+  constructor(private readonly kafkaService: KafkaService, private readonly logger: Logger) {}
+
+  async handle(event: TasksUpdateBatchedEvent): Promise<void> {
+    const { tasks, batchNumber } = event;
+    this.logger.log(`Publishing update batch ${batchNumber} to Kafka`);
+
+    // Publish the batch of updates to Kafka
+    await this.kafkaService.sendMessage('task-update-batch-topic', "tasks");
+  }
+}
+
+
+// ../apps/task-management-service/src/domains/task/events/impl/tasks-batched.event.ts
+// ../apps/task-management-service/src/domains/task/events/impl/tasks-batched.event.ts
+import { IEvent } from '@nestjs/cqrs';
+import { CreateTaskDto } from '../../dto/create-task.dto';
+
+export class TasksBatchedEvent implements IEvent {
+  constructor(public readonly tasks: CreateTaskDto[], public readonly batchNumber: number) {}
+}
+
+
+// ../apps/task-management-service/src/domains/task/events/impl/tasks-update-batched.event.ts
+// ../apps/task-management-service/src/domains/task/events/impl/tasks-update-batched.event.ts
+import { IEvent } from '@nestjs/cqrs';
+import { UpdateTaskDto } from '../../dto/update-task.dto';
+
+export class TasksUpdateBatchedEvent implements IEvent {
+  constructor(public readonly tasks: UpdateTaskDto[], public readonly batchNumber: number) {}
+}
+
+
+// ../apps/task-management-service/src/domains/task/events/index.ts
+import { TasksBatchedEventHandler } from "./handlers/tasks-batched.handler";
+import { TasksUpdateBatchedEventHandler } from "./handlers/tasks-update-batched.handler";
+
+export const TaskEventHandlers = [
+    TasksUpdateBatchedEventHandler,
+    TasksBatchedEventHandler
+  ];
+
+// ../apps/task-management-service/src/domains/task/queries/handlers/get-all-tasks.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { Task } from '@app/domains/task/entities/task.entity';
+import { GetAllTasksQuery } from '@app/domains/task/queries/impl/get-all-tasks.query';
+
+@QueryHandler(GetAllTasksQuery)
+export class GetAllTasksHandler implements IQueryHandler<GetAllTasksQuery> {
+  constructor(private readonly taskRepository: TaskRepository) {}
+
+  async execute(query: GetAllTasksQuery): Promise<{data:Task[],total:number}> {
+    const { limit, page } = query;
+    const skip = (page - 1) * limit;
+    const tasks = await this.taskRepository.findAll(limit, skip);
+    const total = await this.taskRepository.countAll();
+    return {
+      data: tasks,
+      total,
+    };
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/queries/handlers/get-task-by-id.handler.ts
+import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { GetTaskByIdQuery } from '@app/domains/task/queries/impl/get-task-by-id.query';
+import { Task } from '@app/domains/task/entities/task.entity';
+
+@QueryHandler(GetTaskByIdQuery)
+export class GetTaskByIdHandler implements IQueryHandler<GetTaskByIdQuery> {
+  constructor(private readonly taskRepository: TaskRepository) {}
+
+  async execute(query: GetTaskByIdQuery): Promise<Task | null> {
+    return this.taskRepository.findById(query.id);
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/queries/impl/get-all-tasks.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetAllTasksQuery implements IQuery {
+  constructor(public readonly limit: number, public readonly page: number) {}
+}
+
+// ../apps/task-management-service/src/domains/task/queries/impl/get-task-by-id.query.ts
+import { IQuery } from '@nestjs/cqrs';
+
+export class GetTaskByIdQuery implements IQuery {
+  constructor(public readonly id: string) {}
+}
+
+// ../apps/task-management-service/src/domains/task/queries/index.ts
+import { GetAllTasksHandler } from './handlers/get-all-tasks.handler';
+import { GetTaskByIdHandler } from './handlers/get-task-by-id.handler';
+
+export const TaskQueryHandlers = [
+  GetAllTasksHandler,
+  GetTaskByIdHandler,
+];
+
+// ../apps/task-management-service/src/domains/task/repositories/task.repository.ts
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { ClientSession, Model } from 'mongoose';
+import { Task, TaskDocument } from '@app/domains/task/entities/task.entity';
+import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
+import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
+
+@Injectable()
+export class TaskRepository {
+  constructor(@InjectModel(Task.name) private readonly taskModel: Model<TaskDocument>) { }
+
+  async create(createTaskDto: CreateTaskDto): Promise<Task> {
+    const newTask = new this.taskModel(createTaskDto);
+    return newTask.save();
+  }
+
+  async findById(id: string): Promise<Task | null> {
+    return this.taskModel.findById(id).exec();
+  }
+
+  async findAll(limit: number, skip: number): Promise<Task[]> {
+    return this.taskModel.find().skip(skip).limit(limit).exec();
+  }
+
+  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task | null> {
+    return this.taskModel.findOneAndUpdate({ _id: id }, updateTaskDto, { new: true }).exec();
+  }
+
+  async delete(id: string): Promise<Task | null> {
+    return this.taskModel.findByIdAndDelete(id).exec();
+  }
+
+  async countAll(): Promise<number> {
+    return await this.taskModel.countDocuments();
+  }
+
+  async insertMany(createTaskDtos: CreateTaskDto[], options: { session: ClientSession }): Promise<Task[]> {
+    try {
+      // Pass the session into the insertMany method
+      return await this.taskModel.insertMany(createTaskDtos, options);
+    } catch (error) {
+      throw new Error('Failed to insert tasks in bulk: ' + error.message);
+    }
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/services/task.service.ts
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateTaskCommand } from '@app/domains/task/commands/impl/create-task.command';
+import { DeleteTaskCommand } from '@app/domains/task/commands/impl/delete-task.command';
+import { UpdateTaskCommand } from '@app/domains/task/commands/impl/update-task.command';
+import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
+import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
+import { GetAllTasksQuery } from '@app/domains/task/queries/impl/get-all-tasks.query';
+import { GetTaskByIdQuery } from '@app/domains/task/queries/impl/get-task-by-id.query';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { BulkCreateTasksCommand } from '../commands/impl/bulk-create-task.command';
+import { BulkUpdateTasksCommand } from '../commands/impl/bulk-update-task.command';
+
+
+@Injectable()
+export class TaskService {
+  constructor(
+    private commandBus: CommandBus,
+    private queryBus: QueryBus,
+    private readonly logger: Logger,
+  ) {}
+
+  async createTask(createTaskDto: CreateTaskDto) {
+    try {
+      this.logger.log(`Creating task with data: ${JSON.stringify(createTaskDto)}`);
+      const task = await this.commandBus.execute(new CreateTaskCommand(createTaskDto));
+      this.logger.log(`Task created with ID: ${task._id}`);
+      return task;
+    } catch (error) {
+      this.logger.error('Failed to create task', error.stack);
+      throw new InternalServerErrorException('Failed to create task', error);
+    }
+  }
+
+  async updateTask(id: string, updateTaskDto: UpdateTaskDto) {
+    try {
+      this.logger.log(`Updating task with ID: ${id} and data: ${JSON.stringify(updateTaskDto)}`);
+      const task = await this.commandBus.execute(new UpdateTaskCommand(id, updateTaskDto));
+      if (!task) {
+        this.logger.warn(`Task not found with ID: ${id}`);
+        throw new NotFoundException('Task not found');
+      }
+      this.logger.log(`Task updated successfully with ID: ${id}`);
+      return task;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to update task: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to update task', error.stack);
+      throw new InternalServerErrorException('Failed to update task', error);
+    }
+  }
+
+  async deleteTask(id: string) {
+    try {
+      this.logger.log(`Deleting task with ID: ${id}`);
+      const task = await this.commandBus.execute(new DeleteTaskCommand(id));
+      if (!task) {
+        this.logger.warn(`Task not found with ID: ${id}`);
+        throw new NotFoundException('Task not found');
+      }
+      this.logger.log(`Task deleted successfully with ID: ${id}`);
+      return task;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to delete task: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to delete task', error.stack);
+      throw new InternalServerErrorException('Failed to delete task', error);
+    }
+  }
+
+  async getTaskById(id: string) {
+    try {
+      this.logger.log(`Retrieving task with ID: ${id}`);
+      const task = await this.queryBus.execute(new GetTaskByIdQuery(id));
+      if (!task) {
+        this.logger.warn(`Task not found with ID: ${id}`);
+        throw new NotFoundException('Task not found');
+      }
+      this.logger.log(`Task retrieved with ID: ${id}`);
+      return task;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn(`Failed to retrieve task: ${error.message}`);
+        throw error;
+      }
+      this.logger.error('Failed to retrieve task', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve task', error);
+    }
+  }
+
+  async getAllTasks(limit = 10, page = 1) {
+    try {
+      this.logger.log(`Retrieving all tasks with limit: ${limit}, page: ${page}`);
+
+      const tasks = await this.queryBus.execute(new GetAllTasksQuery(limit, page));
+
+      this.logger.log(`Retrieved ${tasks.length} tasks`);
+      return tasks;
+    } catch (error) {
+      this.logger.error('Failed to retrieve tasks', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve tasks', error);
+    }
+  }
+
+  async bulkCreateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+    // Pass the file buffer and mimetype to the command
+    return this.commandBus.execute(new BulkCreateTasksCommand(fileBuffer, mimetype));
+  }
+
+  async bulkUpdateTasks(fileBuffer: Buffer, mimetype: string): Promise<any> {
+    // Pass the file buffer and mimetype to the command
+    return this.commandBus.execute(new BulkUpdateTasksCommand(fileBuffer, mimetype));
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/task.module.ts
+import { Module, DynamicModule } from '@nestjs/common';
+import { getConnectionToken, MongooseModule } from '@nestjs/mongoose';
+import { CqrsModule } from '@nestjs/cqrs';
+import { TaskController } from './controllers/task.controller';
+import { TaskService } from './services/task.service';
+import { TaskRepository } from './repositories/task.repository';
+import { TaskCommandHandlers } from './commands';
+import { TaskQueryHandlers } from './queries';
+import { CoreModule } from '@app/core/core.module';
+import { Task, TaskSchema } from './entities/task.entity';
+import { Connection } from 'mongoose';
+import { TaskEventHandlers } from './events';
+import { Kafka } from 'kafkajs';
+import { KafkaModule } from '@app/kafka/kafka.module';
+
+@Module({})
+export class TaskModule {
+  static forRoot(): DynamicModule {
+    return {
+      module: TaskModule,
+      imports: [
+        MongooseModule.forFeature([{ name: Task.name, schema: TaskSchema }]),
+        CqrsModule,
+        CoreModule,
+        KafkaModule,
+      ],
+      providers: [
+        TaskService,
+        TaskRepository,
+        ...TaskCommandHandlers,
+        ...TaskQueryHandlers,
+        ...TaskEventHandlers,
+        {
+          provide: Connection,  // Provide the `Connection` object using `getConnectionToken`
+          useFactory: (connection: Connection) => connection,
+          inject: [getConnectionToken()],
+        },
+      ],
+      controllers: [TaskController],
+      exports: [
+        TaskService,
+        TaskRepository,
+        ...TaskCommandHandlers,
+        ...TaskQueryHandlers,
+        ...TaskEventHandlers
+      ],
+    };
+  }
+}
+
+// ../apps/task-management-service/src/domains/task/tests/e2e/task.e2e-spec.ts
+import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as request from 'supertest';
+import { AppModule } from '../../../../app.module';
+import { Task } from '@app/domains/task/entities/task.entity';
+
+describe('TaskController (e2e)', () => {
+  let app: INestApplication;
+
+  const mockTask: Task = {
+    _id: 'task-id',
+    title: 'Test Task',
+    description: 'This is a test task',
+    priority: 'Medium',
+    status: 'To Do',
+    deadline: new Date(),
+  } as Task;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('/api/tasks (POST) - should create a new task', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/tasks')
+      .send({
+        _id:"66e578cc9f2e2bca648b4f99",
+        title: 'Test Task',
+        description: 'This is a test task',
+        priority: 'Medium',
+        status: 'To Do',
+        deadline: new Date(),
+      })
+      .expect(201);
+
+    expect(response.body.title).toBe('Test Task');
+  });
+
+  it('/api/tasks/:id (GET) - should get a task by id', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/tasks/66e578cc9f2e2bca648b4f99`)
+      .expect(200);
+
+    expect(response.body.title).toBe('Test Task');
+  });
+
+  it('/api/tasks (GET) - should get all tasks', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/tasks')
+      .query({ limit: 10, page: 1 })
+      .expect(200);
+
+    expect(response.body.length).toBeGreaterThan(0);
+  });
+
+  it('/api/tasks/:id (PUT) - should update a task', async () => {
+    const response = await request(app.getHttpServer())
+      .put('/api/tasks/66e578cc9f2e2bca648b4f99')
+      .send({
+        title: 'Updated Task',
+      })
+      .expect(200);
+
+    expect(response.body.title).toBe('Updated Task');
+  });
+
+  it('/api/tasks/:id (DELETE) - should delete a task', async () => {
+    await request(app.getHttpServer())
+      .delete(`/api/tasks/66e578cc9f2e2bca648b4f99`)
+      .expect(200);
+  });
+});
+
+// ../apps/task-management-service/src/domains/task/tests/unit/create-task.handler.unit-spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { CreateTaskHandler } from '@app/domains/task/commands/handlers/create-task.handler';
+import { CreateTaskCommand } from '@app/domains/task/commands/impl/create-task.command';
+import { Task } from '@app/domains/task/entities/task.entity';
+import { Logger } from '@app/core/common/logger/logger.service';
+
+describe('CreateTaskHandler', () => {
+  let handler: CreateTaskHandler;
+  let taskRepository: TaskRepository;
+  let logger: Logger;
+
+  const mockTask: Task = {
+    _id: 'task-id',
+    title: 'Test Task',
+    description: 'This is a test task',
+    priority: 'Medium',
+    status: 'To Do',
+    deadline: new Date(),
+  } as Task;
+
+  const mockCreateTaskDto = {
+    title: 'Test Task',
+    description: 'This is a test task',
+    priority: 'Medium',
+    status: 'To Do',
+    deadline: new Date(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CreateTaskHandler,
+        {
+          provide: TaskRepository,
+          useValue: {
+            create: jest.fn().mockResolvedValue(mockTask),
+          },
+        },
+        {
+          provide: Logger,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    handler = module.get<CreateTaskHandler>(CreateTaskHandler);
+    taskRepository = module.get<TaskRepository>(TaskRepository);
+    logger = module.get<Logger>(Logger);
+  });
+
+  it('should create a task successfully', async () => {
+    const command = new CreateTaskCommand(mockCreateTaskDto);
+    const result = await handler.execute(command);
+
+    expect(result).toEqual(mockTask);
+    expect(taskRepository.create).toHaveBeenCalledWith(mockCreateTaskDto);
+    expect(logger.log).toHaveBeenCalledWith(`Creating a new task with data: ${JSON.stringify(mockCreateTaskDto)}`);
+    expect(logger.log).toHaveBeenCalledWith(`Task created successfully with ID: ${mockTask._id}`);
+  });
+
+  it('should handle errors during task creation', async () => {
+    jest.spyOn(taskRepository, 'create').mockRejectedValue(new Error('Creation failed'));
+    const command = new CreateTaskCommand(mockCreateTaskDto);
+    await expect(handler.execute(command)).rejects.toThrow('Creation failed');
+    expect(logger.error).toHaveBeenCalled();
+  });
+});
+
+// ../apps/task-management-service/src/domains/task/tests/unit/delete-task.handler.unit-spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { NotFoundException } from '@nestjs/common';
+import { DeleteTaskHandler } from '../../commands/handlers/delete-task.handler';
+import { DeleteTaskCommand } from '../../commands/impl/delete-task.command';
+import { Task } from '@app/domains/task/entities/task.entity';
+
+describe('DeleteTaskHandler', () => {
+  let handler: DeleteTaskHandler;
+  let taskRepository: TaskRepository;
+  let logger: Logger;
+
+  const mockTask = {
+    _id: 'task-id',
+    title: 'Test Task',
+    description: 'This is a test task',
+  } as Task;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        DeleteTaskHandler,
+        {
+          provide: TaskRepository,
+          useValue: {
+            findById: jest.fn().mockResolvedValue(mockTask),
+            delete: jest.fn().mockResolvedValue(mockTask),
+          },
+        },
+        {
+          provide: Logger,
+          useValue: {
+            log: jest.fn(),
+            warn: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    handler = module.get<DeleteTaskHandler>(DeleteTaskHandler);
+    taskRepository = module.get<TaskRepository>(TaskRepository);
+    logger = module.get<Logger>(Logger);
+  });
+
+  it('should delete a task successfully', async () => {
+    const command = new DeleteTaskCommand('task-id');
+    const result = await handler.execute(command);
+
+    expect(result).toEqual(mockTask);
+    expect(taskRepository.findById).toHaveBeenCalledWith('task-id');
+    expect(taskRepository.delete).toHaveBeenCalledWith('task-id');
+    expect(logger.log).toHaveBeenCalled();
+  });
+
+  it('should throw NotFoundException if task not found', async () => {
+    jest.spyOn(taskRepository, 'findById').mockResolvedValueOnce(null);
+    const command = new DeleteTaskCommand('task-id');
+    await expect(handler.execute(command)).rejects.toThrow(NotFoundException);
+  });
+});
+
+// ../apps/task-management-service/src/domains/task/tests/unit/task.service.unit-spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { CreateTaskCommand } from '../../commands/impl/create-task.command';
+import { DeleteTaskCommand } from '../../commands/impl/delete-task.command';
+import { UpdateTaskCommand } from '../../commands/impl/update-task.command';
+import { GetAllTasksQuery } from '../../queries/impl/get-all-tasks.query';
+import { GetTaskByIdQuery } from '../../queries/impl/get-task-by-id.query';
+import { TaskService } from '../../services/task.service';
+
+describe('TaskService', () => {
+  let service: TaskService;
+  let commandBus: CommandBus;
+  let queryBus: QueryBus;
+
+  const mockTask = { _id: 'task-id', title: 'Test Task', description: 'This is a test task' };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TaskService,
+        {
+          provide: CommandBus,
+          useValue: {
+            execute: jest.fn(),
+          },
+        },
+        {
+          provide: QueryBus,
+          useValue: {
+            execute: jest.fn(),
+          },
+        },
+        {
+          provide: Logger,
+          useValue: {
+            log: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<TaskService>(TaskService);
+    commandBus = module.get<CommandBus>(CommandBus);
+    queryBus = module.get<QueryBus>(QueryBus);
+  });
+
+  it('should create a task', async () => {
+    const createTaskDto = { title: 'Test Task', description: 'This is a test task', priority: 'Medium', status: 'To Do', deadline: new Date() };
+    jest.spyOn(commandBus, 'execute').mockResolvedValueOnce(mockTask);
+    const result = await service.createTask(createTaskDto);
+
+    expect(result).toEqual(mockTask);
+    expect(commandBus.execute).toHaveBeenCalledWith(new CreateTaskCommand(createTaskDto));
+  });
+
+  it('should update a task', async () => {
+    const updateTaskDto = { title: 'Updated Task' };
+    jest.spyOn(commandBus, 'execute').mockResolvedValueOnce(mockTask);
+    const result = await service.updateTask('task-id', updateTaskDto);
+
+    expect(result).toEqual(mockTask);
+    expect(commandBus.execute).toHaveBeenCalledWith(new UpdateTaskCommand('task-id', updateTaskDto));
+  });
+
+  it('should delete a task', async () => {
+    jest.spyOn(commandBus, 'execute').mockResolvedValueOnce(mockTask);
+    const result = await service.deleteTask('task-id');
+
+    expect(result).toEqual(mockTask);
+    expect(commandBus.execute).toHaveBeenCalledWith(new DeleteTaskCommand('task-id'));
+  });
+
+  it('should get a task by id', async () => {
+    jest.spyOn(queryBus, 'execute').mockResolvedValueOnce(mockTask);
+    const result = await service.getTaskById('task-id');
+
+    expect(result).toEqual(mockTask);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetTaskByIdQuery('task-id'));
+  });
+
+  it('should get all tasks', async () => {
+    const tasks = [mockTask];
+    jest.spyOn(queryBus, 'execute').mockResolvedValueOnce(tasks);
+    const result = await service.getAllTasks(10, 1);
+
+    expect(result).toEqual(tasks);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetAllTasksQuery(10, 1));
+  });
+});
+
+// ../apps/task-management-service/src/domains/task/tests/unit/update-task.handler.unit-spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { TaskRepository } from '@app/domains/task/repositories/task.repository';
+import { Logger } from '@app/core/common/logger/logger.service';
+import { NotFoundException } from '@nestjs/common';
+import { UpdateTaskHandler } from '../../commands/handlers/update-task.handler';
+import { UpdateTaskCommand } from '../../commands/impl/update-task.command';
+import { Task } from '@app/domains/task/entities/task.entity';
+
+describe('UpdateTaskHandler', () => {
+  let handler: UpdateTaskHandler;
+  let taskRepository: TaskRepository;
+  let logger: Logger;
+
+  const mockTask = {
+    _id: 'task-id',
+    title: 'Updated Task',
+    description: 'This is an updated task',
+    priority: 'Medium',
+    status: 'In Progress',
+    deadline: new Date(),
+  } as Task;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UpdateTaskHandler,
+        {
+          provide: TaskRepository,
+          useValue: {
+            findById: jest.fn().mockResolvedValue(mockTask),
+            update: jest.fn().mockResolvedValue(mockTask),
+          },
+        },
+        {
+          provide: Logger,
+          useValue: {
+            log: jest.fn(),
+            warn: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    handler = module.get<UpdateTaskHandler>(UpdateTaskHandler);
+    taskRepository = module.get<TaskRepository>(TaskRepository);
+    logger = module.get<Logger>(Logger);
+  });
+
+  it('should update a task successfully', async () => {
+    const command = new UpdateTaskCommand('task-id', {
+      title: 'Updated Task',
+      description: 'This is an updated task',
+      priority: 'Medium',
+      status: 'In Progress',
+      deadline: new Date(),
+    });
+    const result = await handler.execute(command);
+
+    expect(result).toEqual(mockTask);
+    expect(taskRepository.findById).toHaveBeenCalledWith('task-id');
+    expect(taskRepository.update).toHaveBeenCalledWith('task-id', expect.anything());
+    expect(logger.log).toHaveBeenCalled();
+  });
+
+  it('should throw NotFoundException if task not found', async () => {
+    jest.spyOn(taskRepository, 'findById').mockResolvedValueOnce(null);
+    const command = new UpdateTaskCommand('task-id', { title: 'Updated Task' });
+    await expect(handler.execute(command)).rejects.toThrow(NotFoundException);
+  });
+});
+
