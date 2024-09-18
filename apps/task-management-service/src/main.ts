@@ -88,6 +88,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
+  app.getHttpAdapter().get('/swagger-json', (req, res) => {
+    res.json(document); // Send the JSON version of the Swagger document
+  });
+
   const kafka = new Kafka({
     clientId: 'nestjs-consumer-client',
     brokers: [configService.get<string>('kafka.brokerUrl')],
