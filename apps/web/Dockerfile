@@ -4,7 +4,7 @@ FROM node:18-alpine AS build
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Set working directory in the container
+# Set the working directory in the container
 WORKDIR /app
 
 # Copy package.json and pnpm-lock.yaml to install dependencies
@@ -27,9 +27,6 @@ RUN rm -rf /usr/share/nginx/html/*
 
 # Copy the built files from the previous stage to the NGINX web directory
 COPY --from=build /app/build /usr/share/nginx/html
-
-# Copy custom NGINX config file if needed (optional)
-# COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port 80 for NGINX
 EXPOSE 80

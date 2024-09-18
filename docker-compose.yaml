@@ -1,88 +1,52 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:latest
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+  # mongo:
+  #   image: mongo:latest
+  #   restart: always
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: admin
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo-data:/data/db
 
-  mongoexpress:
-    image: mongo-express
-    ports:
-      - "8081:8081"
-    environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
-      - ME_CONFIG_MONGODB_SERVER=mongo
-    depends_on:
-      - mongo
-    restart: always
+  # mongoexpress:
+  #   image: mongo-express
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+  #     - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
+  #     - ME_CONFIG_MONGODB_SERVER=mongo
+  #   depends_on:
+  #     - mongo
+  #   restart: always
 
-  task-batch-processor-service:
+  web:
     build:
-      context: ./apps/task-batch-processor-service
+      context: ./apps/web
       dockerfile: Dockerfile
     ports:
-      - '3000:3000'
+      - '3000:80'
+    env_file:
+      - ./apps/web/.env  
     volumes:
-      - ./apps/task-batch-processor-service:/app  # Maps the code to local machine
-      - /app/node_modules    # Keeps node_modules in the container
-    environment:
-      - MONGODB_URI=mongodb+srv://misemind:4k8jvV0Ov3tuLwCl@cluster-0.4h0sdof.mongodb.net/proactforge/?retryWrites=true&w=majority&appName=cluster-0
-      - NODE_ENV=development
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
-      - MINIO_USE_SSL=false
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-    # depends_on:
-    #   - mongo
-    #   - minio
-    command: >
-      sh -c "pnpm install && pnpm run start:dev"  # Ensure dependencies are installed and run in dev mode
+      - ./apps/web:/app  # Maps the code to local machine for hot-reloading
 
   task-management-service:
     build:
       context: ./apps/task-management-service
       dockerfile: Dockerfile
     ports:
-      - '4000:3000'
+      - '4000:4000'
+    env_file:
+      - ./apps/task-management-service/.env  
     volumes:
       - ./apps/task-management-service:/app  # Maps the code to local machine
-      - /app/node_modules    # Keeps node_modules in the container
-    environment:
-      - MONGODB_URI=mongodb+srv://misemind:4k8jvV0Ov3tuLwCl@cluster-0.4h0sdof.mongodb.net/proactforge/?retryWrites=true&w=majority&appName=cluster-0
-      - NODE_ENV=development
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
-      - MINIO_USE_SSL=false
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-    # depends_on:
-    #   - mongo
-    #   - minio
-    command: >
-      sh -c "pnpm install && pnpm run start:dev"  # Ensure dependencies are installed and run in dev mode
-
-  frontend:
-  build:
-    context: ./apps/frontend
-    dockerfile: Dockerfile
-  ports:
-    - '3000:3000'
-  volumes:
-    - ./apps/frontend:/app  # Maps the code to local machine
-    - /app/node_modules    # Keeps node_modules in the container
-  environment:
-    NODE_ENV: development
-  command: >
-    sh -c "pnpm install && pnpm run dev"  # Ensure dependencies are installed and run the dev server
+  
+  
 
   # web:
   #   build:
