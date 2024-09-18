@@ -134,23 +134,9 @@ volumes:
       o: bind
       type: none
       device: /Users/vikasbansal/mongo-data
-  minio-data:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /Users/vikasbansal/minio-data
-  ollama:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /Users/vikasbansal/ollama_data
-  webui_data:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /Users/vikasbansal/webui_data
+
   esdata:
-    driver: local    
+    driver: local   
+networks:
+  kafka-network:
+    driver: bridge     
