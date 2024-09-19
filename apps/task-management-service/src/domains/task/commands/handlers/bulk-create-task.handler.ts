@@ -24,29 +24,23 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
   ) { }
 
   async bulkInsertWithRetryAndLogging(tasks: CreateTaskDto[]): Promise<any> {
-    const session: ClientSession = await this.connection.startSession();
-    session.startTransaction();
-
     let attempts = 0;
     const maxRetries = 3;
 
-    // Prepare bulk operations for MongoDB's bulkWrite method
     const bulkOperations = tasks.map(task => {
       if (task.id) {
-        
-        // If there's an id, we perform an upsert (update if exists, insert if not)
         return {
           updateOne: {
-            filter: { _id: task.id },  // Assuming task.id is mapped to _id in MongoDB
-            update: { $set: task },   // Update the existing task
-            upsert: true,  // Insert if the document doesn't exist
+            filter: { _id: task.id },  
+            update: { $set: task },   
+            upsert: true,
           }
         };
       } else {
         // If there's no id, it's an insert
         return {
           insertOne: {
-            document: task,  // Insert new document
+            document: task,
           }
         };
       }
@@ -55,30 +49,22 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
     try {
       while (attempts < maxRetries) {
         try {
-          // Use bulkWrite for both insert and update operations in one call
-          const result = await this.taskRepository.bulkWrite(bulkOperations, { session });
-
-          // Commit transaction if successful
-          await session.commitTransaction();
+          const result = await this.taskRepository.bulkWrite(bulkOperations);
           return result;
         } catch (error) {
           attempts++;
           this.logger.error(`Attempt ${attempts}: Bulk operation failed: ${error.message}`, error.stack);
 
           if (attempts >= maxRetries) {
-            // await session.abortTransaction();
             this.logger.log('Max retries reached, aborting transaction.');
             throw new InternalServerErrorException('Bulk operation failed after max retries.');
           }
         }
       }
     } catch (error) {
-      await session.abortTransaction();
-      this.logger.error('Transaction aborted due to error: ', error.stack);
+      this.logger.error('Error whle Bulk Operatiosn: ', error.stack);
       throw new InternalServerErrorException('Bulk operation failed.');
-    } finally {
-      session.endSession();
-    }
+    } 
   }
 
   async bulkInsertInRedis(tasks: CreateTaskDto[], result: any): Promise<any> {
@@ -120,10 +106,7 @@ export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCo
 
 
         this.socketGateway.emitJobUpdated(job);
-
-
       }
-      // emit socket when Job Updated
       return inserted;
 
     } catch (error) {

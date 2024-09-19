@@ -43,9 +43,9 @@ export class TaskRepository {
     }
   }
 
-  async bulkWrite(operations: any[], options: { session: ClientSession }): Promise<any> {
+  async bulkWrite(operations: any[]): Promise<any> {
     try {
-      return await this.taskModel.bulkWrite(operations, options);
+      return await this.taskModel.bulkWrite(operations);
     } catch (error) {
       throw new Error('Failed to perform bulkWrite operation: ' + error.message);
     }

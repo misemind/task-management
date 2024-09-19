@@ -23,9 +23,10 @@ import { JobModule } from './domains/job/job.module';
   MongooseModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
-    useFactory: (configService: ConfigService) => ({
-      uri: configService.get<string>('database.url'),
-    }),
+    useFactory: (configService: ConfigService) => 
+       ({
+      uri: configService.get<string>('database.url')
+    })
   })],
   controllers: [AppController],
   providers: [AppService],

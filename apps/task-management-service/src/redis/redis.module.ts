@@ -18,8 +18,6 @@ import Redis from 'ioredis';
                 // Construct the Redis URL
                 const redisUrl = `rediss://${username}:${password}@${host}:${port}`;
 
-                console.log('Redis URL:', redisUrl); // Log to ensure URL is correct
-
                 return new Redis({
                     host, port
                 });

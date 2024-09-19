@@ -17,12 +17,6 @@ import { SocketModule } from '@app/socket/socket.module'; // Import SocketModule
           options: {
             client: {
               brokers: [configService.get<string>('kafka.brokerUrl')],
-              ssl: true,
-              sasl: {
-                mechanism: 'plain',
-                username: configService.get<string>('kafka.username') || '',
-                password: configService.get<string>('kafka.password') || '',
-              },
             },
             consumer: {
               groupId: 'nestjs-consumer-group',
