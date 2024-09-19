@@ -6,6 +6,7 @@ import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel
 import { CreateJobDto } from '@app/domains/job/dto/create-job.dto';
 import { JobService } from '@app/domains/job/services/job.service';
 import { SocketGateway } from '@app/socket/socket.gateway';
+import { ConfigService } from '@nestjs/config';
 
 @CommandHandler(ProcessTasksUplaodedFileCommand)
 export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessTasksUplaodedFileCommand> {
@@ -13,7 +14,8 @@ export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessT
     private readonly eventBus: EventBus,
     private readonly logger: Logger,
     private readonly jobService: JobService,
-    private readonly socketGateway: SocketGateway // Inject JobService
+    private readonly socketGateway: SocketGateway,
+    private readonly configService: ConfigService
   ) { }
 
   async execute(command: ProcessTasksUplaodedFileCommand): Promise<void> {
@@ -32,8 +34,7 @@ export class ProcessTasksUplaodedFileHandler implements ICommandHandler<ProcessT
       throw new Error('Unsupported file type');
     }
 
-    // Process tasks in batches of 100
-    const batchSize = 100;
+    const batchSize = this.configService.get('appconfig.batch');
     const batches = [];
 
     for (let i = 0; i < tasks.length; i += batchSize) {

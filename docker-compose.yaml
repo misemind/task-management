@@ -53,6 +53,15 @@ services:
       - LOG_LEVEL=info
       - LOGGING_DESTINATION=elasticsearch
       - LOG_FILE_PATH=logs/app.log
+      - BATCH_SIZE=100
+      - ELASTICSEARCH_API_KEY=n9aRCpIB0Tjy1CvJxMmQ
+      - ELASTICSEARCH_INDEX_PREFIX=nestjs-logs
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
+    # entrypoint: |
+    #   /bin/sh -c "
+    #   if [ -f /usr/share/elasticsearch/api/api_key.json ]; then
+    #     export API_KEY=\$(cat /usr/share/elasticsearch/api/api_key.json | jq -r '.api_key');
+    #     echo \"Using API key: \$API_KEY\";
     env_file:
       - ./apps/task-management-service/.env
     networks:
@@ -114,42 +123,70 @@ services:
     networks:
       - kafka-network
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
-    environment:
-      node.name: elasticsearch
-      discovery.type: single-node
-      bootstrap.memory_lock: true
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-      xpack.security.enabled: false
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    # volumes:
-    #   - esdata:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
+#   elasticsearch:
+#     image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+#     environment:
+#       - discovery.type=single-node
+#       - xpack.security.enabled=false
+#       - ELASTIC_PASSWORD=changeme # Change this to a secure password
+#     ports:
+#       - "9200:9200"
+#     volumes:
+#       - shared_volume:/usr/share/elasticsearch/api  
 
-  logstash:
-    image: docker.elastic.co/logstash/logstash:7.15.0
-    volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-    ports:
-      - "5001:5000"
-      - "9600:9600"
-    depends_on:
-      - elasticsearch
+#   es-init:
+#     image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+#     user: root  # Run as root to have permission to modify file permissions
+#     depends_on:
+#       - elasticsearch
+#     volumes:
+#       - shared_volume:/usr/share/elasticsearch/api  
+#     entrypoint: >
+#       sh -c "
+#       chmod -R 777 /usr/share/elasticsearch/api;
+#       until curl -u elastic:changeme -s http://elasticsearch:9200/_cluster/health | grep 'green'; do
+#         sleep 1;
+#       done;
+#       curl -u elastic:changeme -X POST http://elasticsearch:9200/_security/api_key -H 'Content-Type: application/json' -d '{
+#         \"name\": \"winston_logging_api_key\",
+#         \"expiration\": \"1d\",
+#         \"role_descriptors\": {
+#           \"log_writer\": {
+#             \"cluster\": [\"monitor\"],
+#             \"index\": [{\"names\": [\"logs-*\"], \"privileges\": [\"write\"]}]
+#           }
+#         }
+#       }' > /usr/share/elasticsearch/api/api_key.json;"
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.15.0
-    environment:
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch  
+#   logstash:
+#     image: docker.elastic.co/logstash/logstash:7.15.0
+#     volumes:
+#       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+#     ports:
+#       - "5001:5000"
+#       - "9600:9600"
+#     depends_on:
+#       - elasticsearch
+
+#   kibana:
+#     image: docker.elastic.co/kibana/kibana:7.15.0
+#     environment:
+#       ELASTICSEARCH_URL: http://elasticsearch:9200
+#       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+#     ports:
+#       - "5601:5601"
+#     depends_on:
+#       - elasticsearch  
+
+# volumes:
+#   es_data:
+#     driver: local
+#   shared_volume:
+#     driver: local
+#     driver_opts:
+#       type: "tmpfs"
+#       device: "tmpfs"
+#       o: "uid=1000,gid=1000,mode=1777" 
 
 networks:
   kafka-network:

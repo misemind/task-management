@@ -3,12 +3,14 @@ import { BulkUpdateTasksCommand } from '../impl/bulk-update-task.command';
 import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
 import { Logger } from '@app/core/common/logger/logger.service';
 import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
+import { ConfigService } from '@nestjs/config';
 
 @CommandHandler(BulkUpdateTasksCommand)
 export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCommand> {
   constructor(
     private readonly eventBus: EventBus,
     private readonly logger: Logger,
+    private readonly configService: ConfigService
   ) {}
 
   async execute(command: BulkUpdateTasksCommand): Promise<void> {
@@ -28,7 +30,7 @@ export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCo
     }
 
     // Process tasks in batches of 100
-    const batchSize = 100;
+    const batchSize = this.configService.get('appconfig.batch');
     const batches = [];
 
     for (let i = 0; i < tasks.length; i += batchSize) {

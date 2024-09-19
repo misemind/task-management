@@ -156,3 +156,12 @@ You can uncomment the following services in `docker-compose.yml` if needed:
 - **Elasticsearch**: For advanced search capabilities.
 - **Logstash**: For managing log data.
 - **Kibana**: For visualizing data from Elasticsearch.
+
+## Bulk Operations with Kafka in Monorepo
+
+The frontend allows users to upload an Excel file.
+The NestJS backend processes the Excel data and splits it into batches of 100 records.
+Each batch is then pushed to a Kafka topic for further processing.
+On the backend, the same NestJS service listens (or subscribes) to the Kafka topic and processes these batches one by one.
+
+Note: This Kafka subscription for batch processing could be handled in a separate NestJS service for better separation of concerns. However, for simplicity and ease of management, we have implemented the subscription within the same NestJS project.

@@ -1,5 +1,4 @@
 import { join } from "path";
-
 export default () => ({
     kafka: {
       brokerUrl: process.env.KAFKA_BROKER_URL || 'your-default-broker-url',
@@ -23,6 +22,9 @@ export default () => ({
       },
     host:{
       port: parseInt(process.env.HOST_PORT, 10) || 4000,
+    },
+    appconfig: {
+      batch:parseInt(process.env.BATCH_SIZE, 10) || 100
     }
   });
   
