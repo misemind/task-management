@@ -1,74 +1,158 @@
-Certainly! Here is the `README.md` content formatted for easy copy and paste:
+# Task Management System
 
-```markdown
-# Proactforge Application
+This project is a **Task Management System** inspired by Jira, allowing users to manage tasks via a set of CRUD APIs. It supports bulk task creation via Excel uploads and uses CQRS design pattern in NestJS for the backend. The frontend is built with ReactJS, and Kafka is integrated for efficient bulk task processing. MongoDB is used for storage and Redis for caching.
 
-## Overview
+## Features
 
-This repository contains a monorepo setup for a NestJS application along with MongoDB, Mongo Express, and MinIO services. The project is configured to run using Docker and Docker Compose.
+- **CRUD Operations on Tasks**: Create, Read, Update, and Delete tasks with fields like `id`, `title`, `description`, `status`, and `deadline`.
+- **Bulk Upload API**: Upload an Excel file, and multiple tasks are created in batches.
+- **CQRS Pattern**: Commands and queries are handled separately for efficient processing.
+- **Kafka Integration**: Bulk upload tasks are processed asynchronously in batches using Kafka.
+- **MongoDB for Storage**: Tasks are persisted in MongoDB.
+- **Redis for Caching**: Task data is cached in Redis to optimize performance.
+- **ReactJS Frontend**: A React-based UI to display tasks and job status.
+
+## Project Architecture
+
+```
+.
+├── apps/
+│   ├── web/                    # Frontend (ReactJS)
+│   └── task-management-service/ # Backend (NestJS)
+├── docker-compose.yml           # Docker Compose for services
+└── README.md                    # Project Documentation
+```
 
 ## Prerequisites
 
-Before running this application, ensure you have the following installed:
+- **Docker** and **Docker Compose** installed on your system.
+- **Node.js**, **npm** and **pnpm** (for local development outside Docker, optional).
+  
+## Setup
 
-- [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+1. Clone the repository:
 
-## Getting Started
+    ```bash
+    git clone https://github.com/your-repo/task-management-system.git
+    cd task-management-system
+    ```
 
-### Step 1: Clone the Repository
+2. Ensure Docker and Docker Compose are installed and running.
 
-```sh
-git clone https://github.com/misemind/proactforge.git
-cd proactforge
+3. Set up environment variables for both the backend and frontend by creating `.env` files in the appropriate directories:
+
+    **Backend (`/apps/task-management-service/.env`)**:
+    ```env
+    MONGO_URI=mongodb://mongo:27017/tasksdb
+    REDIS_HOST=redis
+    KAFKA_BROKER=kafka:9092
+    ```
+
+    **Frontend (`/apps/web/.env`)**:
+    ```env
+    REACT_APP_API_URL=http://localhost:4000/api
+    ```
+
+## Running the Project
+
+To run the project locally with Docker Compose:
+
+```bash
+docker-compose up --build
 ```
 
-### Step 2: Set Up Environment Variables
+This will start the following services:
 
-Create a `.env` file in the `apps/server` directory with the following content:
+- **MongoDB** (`mongo`) - Task data storage
+- **Mongo Express** (`mongoexpress`) - Web interface for MongoDB
+- **Task Management Service** (`task-management-service`) - NestJS backend
+- **Web Frontend** (`web`) - ReactJS frontend
+- **Kafka** (`kafka`) and **Zookeeper** (`zookeeper`) - Messaging for task batch processing
+- **Redis** (`redis`) - Caching layer for tasks
+- **Kafka UI** (`kafka-ui`) - Web interface for Kafka monitoring
 
-```env
-MONGO_URI=mongodb://admin:admin@mongo:27017/serverdb
-MINIO_ENDPOINT=http://minio:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-NODE_ENV=production
+## API Documentation
+
+The backend exposes the following APIs for managing tasks:
+
+1. **Create Task**:
+    - **Method**: `POST`
+    - **URL**: `/api/tasks`
+    - **Body**:
+      ```json
+      {
+        "title": "Task Title",
+        "description": "Task Description",
+        "status": "Pending",
+        "deadline": "2024-12-31"
+      }
+      ```
+
+2. **Get Task by ID**:
+    - **Method**: `GET`
+    - **URL**: `/api/tasks/:id`
+
+3. **Update Task**:
+    - **Method**: `PUT`
+    - **URL**: `/api/tasks/:id`
+    - **Body**:
+      ```json
+      {
+        "title": "Updated Title",
+        "description": "Updated Description",
+        "status": "In Progress",
+        "deadline": "2024-12-31"
+      }
+      ```
+
+4. **Delete Task**:
+    - **Method**: `DELETE`
+    - **URL**: `/api/tasks/:id`
+
+5. **Bulk Task Upload**:
+    - **Method**: `POST`
+    - **URL**: `/api/tasks/upload`
+    - **Body**: Multipart form-data, upload an Excel file.
+
+## Kafka & Bulk Processing
+
+The system processes bulk uploads using Kafka:
+
+- The `file upload` API accepts an Excel file, splits the tasks into batches of 100, and publishes each batch as a message to Kafka.
+- Kafka subscribers then consume these messages and insert the batches into MongoDB. The task data is also cached in Redis for faster retrieval.
+
+
+## Frontend
+
+The frontend is a ReactJS-based application that displays:
+
+- **Tasks Table**: Lists all tasks from MongoDB.
+- **Jobs Table**: Displays the status of bulk uploads (jobs) processed via Kafka.
+
+Access the frontend by navigating to:
+
+```
+http://localhost:3000
 ```
 
-### Step 3: Build and Run the Docker Containers
+### Logs
 
-Run the following command to build and start the Docker containers:
+You can view logs for individual services using:
 
-```sh
-docker-compose up -d
+```bash
+docker-compose logs <service-name>
 ```
 
-### Step 4: Access the Application
+Example:
 
-- **Server**: The NestJS application will be accessible at [http://localhost:3000](http://localhost:3000)
-- **Mongo Express**: MongoDB admin interface will be accessible at [http://localhost:8081](http://localhost:8081)
-- **MinIO**: MinIO interface will be accessible at [http://localhost:9001](http://localhost:9001)
-
-## Stopping the Application
-
-To stop the Docker containers, run:
-
-```sh
-docker-compose down
+```bash
+docker-compose logs task-management-service
 ```
 
-## Troubleshooting
+## Optional Services
 
-- Ensure Docker and Docker Compose are installed and running.
-- Verify that no other services are using ports `3000`, `8081`, and `9001`.
+You can uncomment the following services in `docker-compose.yml` if needed:
 
-For further assistance, please refer to the Docker and Docker Compose documentation or create an issue on this repository.
-
----
-
-By following these steps, you will have the Proactforge application up and running with Docker.
-
-```
-
-You can copy this entire block and paste it directly into your `README.md` file.
-```
+- **Elasticsearch**: For advanced search capabilities.
+- **Logstash**: For managing log data.
+- **Kibana**: For visualizing data from Elasticsearch.
