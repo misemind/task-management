@@ -86,7 +86,7 @@ const JobList = () => {
                   <TableCell>{formatDate(job.createdAt)}</TableCell> {/* Use formatDate */}
                   <TableCell>{formatDate(job.completedAt)}</TableCell> {/* Use formatDate */}
                   <TableCell>
-                    <IconButton color="secondary" onClick={() => handleDelete(job)}>
+                    <IconButton color="secondary" data-testid={`delete-jobs-${job?._id}`} onClick={() => handleDelete(job)}>
                       <Delete />
                     </IconButton>
                   </TableCell>
