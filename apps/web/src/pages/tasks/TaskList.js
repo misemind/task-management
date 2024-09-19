@@ -201,7 +201,7 @@ const TaskList = () => {
                     <IconButton color="primary" onClick={() => handleEdit(task)}>
                       <Edit />
                     </IconButton>
-                    <IconButton color="secondary" data-testid={`delete-task-${task._id}`} onClick={() => handleDelete(task)}>
+                    <IconButton color="secondary" data-testid={`delete-task-${task?._id}`} onClick={() => handleDelete(task)}>
                       <Delete />
                     </IconButton>
                   </TableCell>
