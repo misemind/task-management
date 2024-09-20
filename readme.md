@@ -172,3 +172,7 @@ This project includes unit and integration tests written using the Jest testing 
 
 React: Test cases cover the majority of the key components and functionality within the React frontend.
 NestJS: The backend also includes Jest-based tests for many core functionalities and services.
+
+### Flow
+
+![Alt text](./images/tasks-service-flow.png)
