@@ -165,3 +165,10 @@ Each batch is then pushed to a Kafka topic for further processing.
 On the backend, the same NestJS service listens (or subscribes) to the Kafka topic and processes these batches one by one.
 
 Note: This Kafka subscription for batch processing could be handled in a separate NestJS service for better separation of concerns. However, for simplicity and ease of management, we have implemented the subscription within the same NestJS project.
+
+### Testing
+
+This project includes unit and integration tests written using the Jest testing framework for both React and NestJS applications.
+
+React: Test cases cover the majority of the key components and functionality within the React frontend.
+NestJS: The backend also includes Jest-based tests for many core functionalities and services.
