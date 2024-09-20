@@ -4,11 +4,9 @@ import { CreateTaskDto } from '@app/domains/task/dto/create-task.dto';
 import { UpdateTaskDto } from '@app/domains/task/dto/update-task.dto';
 import { TaskService } from '@app/domains/task/services/task.service';
 import { PaginationDto } from '@app/domains/shared/dto/pagination.dto';
-import { Ctx, EventPattern, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
-import { BulkTaskDto } from '../dto/bulk-task.dto';
+import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterConfig } from '@app/config/multerConfig';
-import * as multer from 'multer';
 import { Express } from 'express'; 
 
 @ApiTags('Task')
@@ -64,7 +62,6 @@ export class TaskController {
       throw new BadRequestException('File is required');
     }
 
-    // Pass the file buffer and mimetype to the service for processing
     return this.taskService.processUploadedFile(file.path, file.mimetype);
   }
 

@@ -12,10 +12,8 @@ import { RedisService } from '@app/redis/redis.service';
 @CommandHandler(BulkCreateTasksCommand)
 export class BulkCreateTasksHandler implements ICommandHandler<BulkCreateTasksCommand> {
   constructor(
-    private readonly eventBus: EventBus,
     private readonly logger: Logger,
     private readonly taskRepository: TaskRepository,
-    private readonly connection: Connection,
     private readonly jobService: JobService,
     private readonly socketGateway: SocketGateway,
     private readonly redisService: RedisService

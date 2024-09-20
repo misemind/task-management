@@ -57,11 +57,6 @@ services:
       - ELASTICSEARCH_API_KEY=n9aRCpIB0Tjy1CvJxMmQ
       - ELASTICSEARCH_INDEX_PREFIX=nestjs-logs
       - ELASTICSEARCH_NODE=http://elasticsearch:9200
-    # entrypoint: |
-    #   /bin/sh -c "
-    #   if [ -f /usr/share/elasticsearch/api/api_key.json ]; then
-    #     export API_KEY=\$(cat /usr/share/elasticsearch/api/api_key.json | jq -r '.api_key');
-    #     echo \"Using API key: \$API_KEY\";
     env_file:
       - ./apps/task-management-service/.env
     networks:
