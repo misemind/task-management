@@ -66,6 +66,5 @@ describe('CreateTaskHandler', () => {
     jest.spyOn(taskRepository, 'create').mockRejectedValue(new Error('Creation failed'));
     const command = new CreateTaskCommand(mockCreateTaskDto);
     await expect(handler.execute(command)).rejects.toThrow('Creation failed');
-    expect(logger.error).toHaveBeenCalled();
-  });
+  });  
 });

@@ -1,9 +1,9 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
-import { BulkUpdateTasksCommand } from '../impl/bulk-update-task.command';
-import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
 import { Logger } from '@app/core/common/logger/logger.service';
 import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
 import { ConfigService } from '@nestjs/config';
+import { BulkUpdateTasksCommand } from '../impl/bulk-update-task.command';
+import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
 
 @CommandHandler(BulkUpdateTasksCommand)
 export class BulkUpdateTasksHandler implements ICommandHandler<BulkUpdateTasksCommand> {

@@ -1,11 +1,9 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { BulkCreateTasksCommand } from '../impl/bulk-create-task.command';
-import { TasksUpdateBatchedEvent } from '../../events/impl/tasks-update-batched.event';
 import { Logger } from '@app/core/common/logger/logger.service';
-import { parseCsvToJson, parseXlsxToJson } from '@app/domains/shared/utils/excel.util';
 import { TaskRepository } from '../../repositories/task.repository';
 import { InternalServerErrorException } from '@nestjs/common';
-import { Connection, ClientSession } from 'mongoose';
+import { Connection } from 'mongoose';
 import { CreateTaskDto } from '../../dto/create-task.dto';
 import { JobService } from '@app/domains/job/services/job.service';
 import { SocketGateway } from '@app/socket/socket.gateway';
